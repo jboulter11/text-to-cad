@@ -10,7 +10,6 @@ type Open = (model: string, toolpath?: string, showToolpath?: boolean) => void;
 type Project = { name: string; modified?: number; printed?: FileEntry; models: RecentDocument[] };
 const isSlice = (name: string) => /\.gcode(?:\.3mf)?$/i.test(name);
 const isModel = (name: string) => !isSlice(name) && /\.(?:3mf|stl|step|stp|xbf|glb|obj)$/i.test(name);
-const versionNumber = (name: string) => Number(name.slice(1));
 const groupStyle = "group flex w-full cursor-pointer list-none items-center gap-1.5 rounded-sm px-2 py-1 text-left text-xs hover:bg-sidebar-accent [&::-webkit-details-marker]:hidden";
 const entryStyle = "flex w-full items-center truncate rounded-sm px-2 py-1 text-left text-xs hover:bg-sidebar-accent";
 
@@ -60,16 +59,16 @@ function Version({ name, path, files, list, onOpen }: {
   </details>;
 }
 
-function ProjectRow({ project, list, onOpen }: { project: Project; list: Listing; onOpen: Open }) {
-  const { t } = useI18n();
+function ProjectRow({ project, list, onOpen, sort }: { project: Project; list: Listing; onOpen: Open; sort: string }) {
+  const { t, locale } = useI18n();
   const [open, setOpen] = useState(false);
   const entries = useEntries(list, open ? project.printed?.path : undefined);
   const releases = entries?.find(entry => entry.kind === "directory" && entry.name === "releases");
   const saved = useEntries(list, releases?.path);
-  const versions = new Map<string, { path?: string; files?: FileEntry[] }>();
+  const versions = new Map<string, { path?: string; files?: FileEntry[]; modified?: number }>();
   const loose: FileEntry[] = [];
   for (const entry of saved ?? []) {
-    if (entry.kind === "directory" && /^v\d+$/i.test(entry.name)) versions.set(entry.name.toLowerCase(), { path: entry.path });
+    if (entry.kind === "directory" && /^v\d+$/i.test(entry.name)) versions.set(entry.name.toLowerCase(), { path: entry.path, modified: entry.modified });
   }
   for (const entry of entries ?? []) {
     if (entry.kind !== "file") continue;
@@ -78,24 +77,37 @@ function ProjectRow({ project, list, onOpen }: { project: Project; list: Listing
     const key = "v" + version;
     const group = versions.get(key);
     if (group?.path) continue;
-    if (group?.files) group.files.push(entry);
-    else versions.set(key, { files: [entry] });
+    if (group?.files) {
+      group.files.push(entry);
+      group.modified = Math.max(group.modified ?? 0, entry.modified ?? 0);
+    } else versions.set(key, { files: [entry], modified: entry.modified });
   }
+  const groups = [...versions].map(([name, version]) => ({
+    name, modified: version.modified,
+    node: <Version key={name} name={name} list={list} onOpen={onOpen} {...version} />,
+  }));
+  if (project.models.length) {
+    const working = t("explorer.working");
+    groups.push({
+      name: working,
+      modified: Math.max(...project.models.map(model => model.updated ?? 0)),
+      node: <details key="working">
+        <summary className={groupStyle}><ChevronRight className="size-3 shrink-0" />{working}</summary>
+        <div className="pl-3">
+          {project.models.map(model => <button key={model.path} className={entryStyle}
+            onClick={() => onOpen(model.path)}>{model.name}</button>)}
+        </div>
+      </details>,
+    });
+  }
+  groups.sort(compareExplorerRows(sort, locale));
   return <details onToggle={event => setOpen(event.currentTarget.open)}>
     <summary className={groupStyle} data-project-row="">
       <ChevronRight className="size-3 shrink-0 group-open:rotate-90" /><Folder className="size-3.5 shrink-0" />
       <span className="truncate">{project.name}</span>
     </summary>
     {open && <div className="pl-3">
-      {project.models.length > 0 && <section aria-label={t("explorer.working")}>
-        <h3 className="px-2 py-1 text-xs font-medium text-muted-foreground">{t("explorer.working")}</h3>
-        <div className="pl-3">
-          {project.models.map(model => <button key={model.path} className={entryStyle}
-            onClick={() => onOpen(model.path)}>{model.name}</button>)}
-        </div>
-      </section>}
-      {[...versions].sort(([a], [b]) => versionNumber(b) - versionNumber(a)).map(([name, version]) =>
-        <Version key={name} name={name} list={list} onOpen={onOpen} {...version} />)}
+      {groups.map(group => group.node)}
       <Artifacts entries={loose} onOpen={onOpen} />
       {project.printed && !entries && <p className="m-2 text-xs text-muted-foreground">{t(entries === null ? "explorer.readFailed" : "explorer.loading")}</p>}
     </div>}
@@ -140,7 +152,7 @@ export function ProjectsList({ root, list, recent, onOpen }: {
     <TreeFilterInput label={t("explorer.filterProjects")} placeholder={t("explorer.filterProjects")} value={query}
       onChange={setQuery} onKeyDown={undefined} inputRef={undefined} trailing={undefined} clearLabel={undefined} className={undefined} />
     <div className="min-h-0 flex-1 overflow-y-auto p-1">
-      {rows.map(project => <ProjectRow key={project.name} project={project} list={list} onOpen={onOpen} />)}
+      {rows.map(project => <ProjectRow key={project.name} project={project} sort={sort} list={list} onOpen={onOpen} />)}
       {!rows.length && <p className="m-2 text-xs text-muted-foreground">{t(printed === undefined ? "explorer.loading" : "explorer.noMatches")}</p>}
     </div>
   </div>;
