@@ -159,11 +159,23 @@ export function FileViewer({ file, host, renderers, state, onStateChange, colorS
     ? { source, folder, onOpen: onOpenFile, onFolderChange: onExplorerFolderChange } : null,
     [navigationPath, folder, source, onOpenFile, onExplorerFolderChange]);
   const recentMenu = useMemo(() => recent && onOpenFile ? { list: () => recent.list(), onOpen: onOpenFile } : null, [recent, onOpenFile]);
+  const [browserTab, setBrowserTab] = useState<string | null>(null);
+  const [expandedProjects, setExpandedProjects] = useState<ReadonlySet<string>>(() => new Set());
+  const setProjectExpanded = useCallback((key: string, open: boolean) => {
+    setExpandedProjects(current => {
+      if (current.has(key) === open) return current;
+      const next = new Set(current);
+      if (open) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }, []);
   const projects = openProjectArtifact && projectsRoot && source.list ? <ProjectsList root={projectsRoot}
-    list={source.list} recent={recent} onOpen={openProjectArtifact} /> : null;
+    list={source.list} recent={recent} onOpen={openProjectArtifact}
+    expanded={expandedProjects} onExpandedChange={setProjectExpanded} /> : null;
   const dockedBrowser = dockExplorer && !mobile && path && (explorer || recentMenu)
     ? <NameMenu path={navigationPath ?? path} kind={model ? "model" : "file"} explorer={explorer} recent={recentMenu}
-      onPick={(open: (next: string) => void, next: string) => open(next)} sortable projects={projects} />
+      onPick={(open: (next: string) => void, next: string) => open(next)} sortable projects={projects} activeTab={browserTab} onTabChange={setBrowserTab} />
     : null;
   // The logo's app menu: the host's links and the person's settings (Back to home is `onHome`).
   const menu = useMemo(() => host.links || appSettings?.length || colorScheme || language ? { links: host.links, appSettings, colorScheme, language, platform: appearance.platform } : null,

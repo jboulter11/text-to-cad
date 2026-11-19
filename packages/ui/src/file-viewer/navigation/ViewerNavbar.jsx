@@ -179,11 +179,13 @@ function FileMenu({ platform, capabilities, sourceMissing = false, apps = null, 
  * the host's library's models, by last activity, a row opening its model; Files is the explorer
  * (`FolderExplorer`), from the file's folder, or for a model where the explorer was last. Built anew on each opening, on Models over a model and on Files over a file.
  */
-export function NameMenu({ path, kind, explorer, recent, onPick, sortable = false, projects = /** @type {import("react").ReactNode} */ (null) }) {
+export function NameMenu({ path, kind, explorer, recent, onPick, sortable = false, projects = /** @type {import("react").ReactNode} */ (null),
+  activeTab = /** @type {string | null} */ (null),
+  onTabChange = /** @type {((tab: string) => void) | undefined} */ (undefined) }) {
   const { t } = useI18n();
   const usage = useControlUsage();
   const [selectedTab, setTab] = useState(/** @type {string | null} */ (null));
-  const tab = selectedTab ?? (projects ? "projects" : firstTab(kind, explorer, recent));
+  const tab = activeTab ?? selectedTab ?? (projects ? "projects" : firstTab(kind, explorer, recent));
   // The tab on screen as last chosen: a press and the focus it brings both ask for the same tab.
   const shownTab = useRef(tab);
   const files = explorer ? <FolderExplorer sortable={sortable} source={explorer.source} file={path} folder={explorer.folder} onFolderChange={explorer.onFolderChange}
@@ -191,7 +193,7 @@ export function NameMenu({ path, kind, explorer, recent, onPick, sortable = fals
   const models = recent ? <ModelList sortable={sortable} recent={recent} current={path} onOpen={next => { usage.used("models_open"); onPick(recent.onOpen, next); }} /> : null;
   if (!projects && (!files || !models)) return files ?? models;
   // A tab a person turns to is a use of it, as the one the menu opens on is (`FileName`).
-  return <Tabs value={tab} onValueChange={next => { if (next !== shownTab.current && TAB_CONTROLS[next]) usage.used(TAB_CONTROLS[next]); shownTab.current = next; setTab(next); }} className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden" data-name-menu="">
+  return <Tabs value={tab} onValueChange={next => { if (next !== shownTab.current && TAB_CONTROLS[next]) usage.used(TAB_CONTROLS[next]); shownTab.current = next; if (onTabChange) onTabChange(next); else setTab(next); }} className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden" data-name-menu="">
     <TabsList className="mx-2 mt-2 h-7 w-fit shrink-0 self-start">
       {projects && <TabsTrigger value="projects">{t("explorer.projects")}</TabsTrigger>}
       {!projects && models && <TabsTrigger value="models">{t("explorer.models")}</TabsTrigger>}

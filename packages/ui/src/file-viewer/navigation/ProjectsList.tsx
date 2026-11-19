@@ -6,6 +6,7 @@ import { compareExplorerRows, ExplorerSort } from "./ExplorerSort.jsx";
 import type { FileEntry, FileSource, RecentDocument } from "../types.js";
 
 type Listing = NonNullable<FileSource["list"]>;
+type Expansion = { expanded: ReadonlySet<string>; onExpandedChange(key: string, open: boolean): void };
 type Open = (model: string, toolpath?: string, showToolpath?: boolean) => void;
 type Project = { name: string; modified?: number; printed?: FileEntry; models: RecentDocument[] };
 const isSlice = (name: string) => /\.gcode(?:\.3mf)?$/i.test(name);
@@ -44,13 +45,12 @@ function Artifacts({ entries, onOpen }: { entries: readonly FileEntry[]; onOpen:
   </>;
 }
 
-function Version({ name, path, files, list, onOpen }: {
-  name: string; path?: string; files?: FileEntry[]; list: Listing; onOpen: Open;
+function Version({ name, path, files, list, onOpen, open, setOpen }: {
+  name: string; path?: string; files?: FileEntry[]; list: Listing; onOpen: Open; open: boolean; setOpen(open: boolean): void;
 }) {
   const { t } = useI18n();
-  const [open, setOpen] = useState(false);
   const entries = useEntries(list, open ? path : undefined);
-  return <details onToggle={event => setOpen(event.currentTarget.open)}>
+  return <details open={open} onToggle={event => setOpen(event.currentTarget.open)}>
     <summary className={groupStyle}><ChevronRight className="size-3 shrink-0 group-open:rotate-90" />{name}</summary>
     {open && <div className="pl-3">
       {files || entries ? <Artifacts entries={files ?? entries ?? []} onOpen={onOpen} />
@@ -59,9 +59,11 @@ function Version({ name, path, files, list, onOpen }: {
   </details>;
 }
 
-function ProjectRow({ project, list, onOpen, sort }: { project: Project; list: Listing; onOpen: Open; sort: string }) {
+function ProjectRow({ project, list, onOpen, sort, expanded, onExpandedChange }: {
+  project: Project; list: Listing; onOpen: Open; sort: string;
+} & Expansion) {
   const { t, locale } = useI18n();
-  const [open, setOpen] = useState(false);
+  const open = expanded.has(project.name);
   const entries = useEntries(list, open ? project.printed?.path : undefined);
   const releases = entries?.find(entry => entry.kind === "directory" && entry.name === "releases");
   const saved = useEntries(list, releases?.path);
@@ -84,14 +86,16 @@ function ProjectRow({ project, list, onOpen, sort }: { project: Project; list: L
   }
   const groups = [...versions].map(([name, version]) => ({
     name, modified: version.modified,
-    node: <Version key={name} name={name} list={list} onOpen={onOpen} {...version} />,
+    node: <Version key={name} name={name} list={list} onOpen={onOpen} {...version}
+      open={expanded.has(`${project.name}/${name}`)} setOpen={value => onExpandedChange(`${project.name}/${name}`, value)} />,
   }));
   if (project.models.length) {
     const working = t("explorer.working");
     groups.push({
       name: working,
       modified: Math.max(...project.models.map(model => model.updated ?? 0)),
-      node: <details key="working">
+      node: <details key="working" open={expanded.has(`${project.name}/working`)}
+        onToggle={event => onExpandedChange(`${project.name}/working`, event.currentTarget.open)}>
         <summary className={groupStyle}><ChevronRight className="size-3 shrink-0" />{working}</summary>
         <div className="pl-3">
           {project.models.map(model => <button key={model.path} className={entryStyle}
@@ -101,7 +105,7 @@ function ProjectRow({ project, list, onOpen, sort }: { project: Project; list: L
     });
   }
   groups.sort(compareExplorerRows(sort, locale));
-  return <details onToggle={event => setOpen(event.currentTarget.open)}>
+  return <details open={open} onToggle={event => onExpandedChange(project.name, event.currentTarget.open)}>
     <summary className={groupStyle} data-project-row="">
       <ChevronRight className="size-3 shrink-0 group-open:rotate-90" /><Folder className="size-3.5 shrink-0" />
       <span className="truncate">{project.name}</span>
@@ -114,12 +118,12 @@ function ProjectRow({ project, list, onOpen, sort }: { project: Project; list: L
   </details>;
 }
 
-export function ProjectsList({ root, list, recent, onOpen }: {
+export function ProjectsList({ root, list, recent, onOpen, expanded, onExpandedChange }: {
   root: string;
   list: Listing;
   recent?: { list(): Promise<readonly RecentDocument[]> };
   onOpen: Open;
-}) {
+} & Expansion) {
   const { t, locale } = useI18n();
   const [sort, setSort] = useState("modified");
   const [query, setQuery] = useState("");
@@ -152,7 +156,8 @@ export function ProjectsList({ root, list, recent, onOpen }: {
     <TreeFilterInput label={t("explorer.filterProjects")} placeholder={t("explorer.filterProjects")} value={query}
       onChange={setQuery} onKeyDown={undefined} inputRef={undefined} trailing={undefined} clearLabel={undefined} className={undefined} />
     <div className="min-h-0 flex-1 overflow-y-auto p-1">
-      {rows.map(project => <ProjectRow key={project.name} project={project} sort={sort} list={list} onOpen={onOpen} />)}
+      {rows.map(project => <ProjectRow key={project.name} project={project} sort={sort} list={list} onOpen={onOpen}
+        expanded={expanded} onExpandedChange={onExpandedChange} />)}
       {!rows.length && <p className="m-2 text-xs text-muted-foreground">{t(printed === undefined ? "explorer.loading" : "explorer.noMatches")}</p>}
     </div>
   </div>;
