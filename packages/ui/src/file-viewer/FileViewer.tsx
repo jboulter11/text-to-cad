@@ -171,7 +171,10 @@ export function FileViewer({ file, host, renderers, state, onStateChange, colorS
     });
   }, []);
   const projects = openProjectArtifact && projectsRoot && source.list ? <ProjectsList root={projectsRoot}
-    list={source.list} recent={recent} onOpen={openProjectArtifact}
+    list={source.list} recent={recent} onOpen={(model, toolpath, showToolpath) => {
+      setBrowserTab("projects");
+      openProjectArtifact(model, toolpath, showToolpath);
+    }}
     expanded={expandedProjects} onExpandedChange={setProjectExpanded} /> : null;
   const dockedBrowser = dockExplorer && !mobile && path && (explorer || recentMenu)
     ? <NameMenu path={navigationPath ?? path} kind={model ? "model" : "file"} explorer={explorer} recent={recentMenu}
