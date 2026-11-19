@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Color, InterleavedBufferAttribute,
+  Color, InstancedBufferGeometry, InterleavedBufferAttribute, Mesh,
   PerspectiveCamera, Scene, Vector3, WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
-import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
-import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
+import { extrusionGeometry, extrusionMaterial } from './extrusion';
 import { toolColor } from './parse.js';
 
 export type Layer = { z: number; paths: Float32Array };
@@ -21,7 +19,7 @@ type ViewportProps = {
 export function ToolpathViewport({ layers, bounds, colors, index, cumulative, colorByHeight, lineWidth, view, label, unavailable, cameraState }: ViewportProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const runtime = useRef<{
-    draw: () => void; show: (index: number, cumulative: boolean) => void; geometry: LineSegmentsGeometry; rgb: Float32Array; camera: PerspectiveCamera; orbit: OrbitControls; center: Vector3; distance: number;
+    draw: () => void; show: (index: number, cumulative: boolean) => void; geometry: InstancedBufferGeometry; rgb: Float32Array; camera: PerspectiveCamera; orbit: OrbitControls; center: Vector3; distance: number;
   }>(null);
   const lastView = useRef(view);
   const [failed, setFailed] = useState(false);
@@ -57,7 +55,7 @@ export function ToolpathViewport({ layers, bounds, colors, index, cumulative, co
 
     const length = layers.reduce((sum, layer) => sum + layer.paths.length / 5 * 6, 0);
     const positions = new Float32Array(length);
-    const rgb = new Float32Array(length);
+    const rgb = new Float32Array(length / 2);
     const ends = [0];
     let cursor = 0;
     for (const { z, paths } of layers) {
@@ -67,13 +65,14 @@ export function ToolpathViewport({ layers, bounds, colors, index, cumulative, co
       }
       ends.push(cursor);
     }
-    const geometry = new LineSegmentsGeometry().setPositions(positions).setColors(rgb);
-    const material = new LineMaterial({ vertexColors: true, worldUnits: true, linewidth: lineWidth, alphaToCoverage: true });
+    const geometry = extrusionGeometry(positions, rgb);
+    const material = extrusionMaterial(lineWidth);
     const scene = new Scene();
     scene.background = new Color(0x101a23);
-    const lines = new LineSegments2(geometry, material);
+    const lines = new Mesh(geometry, material);
+    lines.frustumCulled = false;
     scene.add(lines);
-    let singleLayer: LineSegmentsGeometry | undefined;
+    let singleLayer: InstancedBufferGeometry | undefined;
     const show = (index: number, cumulative: boolean) => {
       singleLayer?.dispose();
       singleLayer = undefined;
@@ -82,8 +81,7 @@ export function ToolpathViewport({ layers, bounds, colors, index, cumulative, co
         geometry.instanceCount = end / 6;
       } else {
         const start = ends[index];
-        singleLayer = new LineSegmentsGeometry()
-          .setPositions(positions.subarray(start, end)).setColors(rgb.subarray(start, end));
+        singleLayer = extrusionGeometry(positions.subarray(start, end), rgb.subarray(start / 2, end / 2));
       }
       lines.geometry = singleLayer ?? geometry;
       draw();
@@ -126,7 +124,7 @@ export function ToolpathViewport({ layers, bounds, colors, index, cumulative, co
   useEffect(() => {
     const current = runtime.current;
     if (!current) return;
-    const attribute = current.geometry.getAttribute('instanceColorStart') as InterleavedBufferAttribute;
+    const attribute = current.geometry.getAttribute('segmentColor') as InterleavedBufferAttribute;
     const maxZ = layers.reduce((max, layer) => Math.max(max, layer.z), 1);
     const palette = new Map<number, Color>();
     const height = new Color();
@@ -142,10 +140,9 @@ export function ToolpathViewport({ layers, bounds, colors, index, cumulative, co
           color = cached ?? new Color(toolColor(colors, tool));
           if (!cached) palette.set(tool, color);
         }
-        rgb[cursor] = rgb[cursor + 3] = color.r;
-        rgb[cursor + 1] = rgb[cursor + 4] = color.g;
-        rgb[cursor + 2] = rgb[cursor + 5] = color.b;
-        cursor += 6;
+        rgb[cursor++] = color.r;
+        rgb[cursor++] = color.g;
+        rgb[cursor++] = color.b;
       }
     }
     attribute.data.needsUpdate = true;
