@@ -1392,7 +1392,7 @@ person may be using a page or the CAD app for hours without a build. It stops in
 its door is gone -- its folder removed, a
 temporary folder cleaned up, or another file put in the door's place -- so that no one can reach it
 (`Daemon.tend` sees it within a round, and it stops as `stop` does, saving what it holds to the
-cache); and with the machine. **No timer retires a worker either**: memory alone does. Idle
+cache); and with the machine. Workers stay warm by default. Set `CAD_ENGINE_WORKER_IDLE_SECONDS` to a positive number of seconds to drain idle workers and close idle reader and mesh pools during the daemon's periodic maintenance. Idle
 documents are saved to the cache, past the memory budget what no page watches leaves memory for it
 (**Document lifetime**), and past the workers' memory cap, or under the system's memory pressure,
 idle workers go (below). It holds a pool of warm workers, one per model script and Python (and one for
@@ -1431,7 +1431,7 @@ tessellations, is under one memory budget: **Document lifetime**.)
   `CAD_ENGINE_STANDBY=0` keeps none (`daemon.standby`): an operator's seam for CI and machines
   short of memory, not a setting a model's author touches; unset or any other value, the standby
   stands by. A test suite sets it for every daemon it starts but the standby's own.
-- **Memory retires, never a timer.** The workers' resident memory -- each one's as it measured it at
+- **Memory-based retirement.** The workers' resident memory -- each one's as it measured it at
   its start and after each build, the standby's and the render processes' with it -- is held to one
   cap, `CAD_ENGINE_WORKER_RSS_MB` (default: a quarter of the machine's memory, at least 2 GiB;
   `0` for no cap; `Supervisor.shed`). After each build and picture, and each `Daemon.tend` round, past
@@ -1440,8 +1440,7 @@ tessellations, is under one memory budget: **Document lifetime**.)
   worker is drained first, so its documents stay held. Under the system's memory pressure (the server's
   `serve.Pressure`, polled every two seconds), the standby goes at once, none starts while it lasts, and
   the rest go down to half the cap (`CAD_ENGINE_PRESSURE`: `0` never under it, `1` always, unset
-  measured; a test's seam, `Pressure.from_environment`). A busy process is never retired, and an idle worker under the cap lives as long as the
-  engine. A worker alone over the cap after a build is retired at once: the report says so
+  measured; a test's seam, `Pressure.from_environment`). A busy process is never retired, and an idle worker under the cap stays warm unless the optional idle timeout expires. A worker alone over the cap after a build is retired at once: the report says so
   (`retired`), and once it has answered the daemon drains it and closes its stdin.
 - **Collected when idle.** A worker builds with Python's cyclic collector off and collects once
   no request has come for half a second, so a script's calls one after another never wait on

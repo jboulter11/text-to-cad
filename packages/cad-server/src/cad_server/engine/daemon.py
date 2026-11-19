@@ -222,6 +222,14 @@ def worker_cap() -> int:
     return given if given > 0 else (os.cpu_count() or 1)
 
 
+def worker_idle_seconds() -> int:
+    """Optional time to keep idle workers warm. Zero preserves the upstream default."""
+    try:
+        return max(0, int(os.environ.get("CAD_ENGINE_WORKER_IDLE_SECONDS", "0")))
+    except ValueError:
+        return 0
+
+
 def _note_failure(reason: str, error: OSError) -> None:
     _note(f"{reason}: {error.strerror or error}", denied=isinstance(error, PermissionError))
 
@@ -1674,8 +1682,8 @@ class Daemon:
         self.address, self.address_id = address, _identity(address)
 
     def tend(self) -> None:
-        """What the engine looks after, each ``TEND_SECONDS``: never the process, and nothing by how
-        long anything has been idle. A killed client's pipes are swept, and the processes' memory is
+        """What the engine looks after, each ``TEND_SECONDS``: a killed client's pipes are swept, idle
+        workers may expire when configured, and the processes' memory is
         held to its cap and the system's pressure (``Supervisor.shed``: a worker's documents drained
         first, so they stay held); the memory budget sends unwatched documents out of memory, least recently used
         first, to the cache, as they are loaded (``serve.Server.trim``); telemetry's spool is handed to a sender
@@ -1689,6 +1697,11 @@ class Daemon:
         if self.door is not None:
             self.door.sweep()
         self.supervisor.shed(self.pressure.under())
+        idle_seconds = worker_idle_seconds()
+        if idle_seconds:
+            self.supervisor.retire_idle(idle_seconds)
+            if self.server is not None:
+                self.server.retire_idle_workers(idle_seconds)
         self.models.prune()
         _automatic(self)
         _send_counts()

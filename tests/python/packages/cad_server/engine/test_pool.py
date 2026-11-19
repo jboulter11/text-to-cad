@@ -1,6 +1,6 @@
 """The daemon's workers, by the supervisor's rules: at most a cap of them alive, requests past it
 waiting first come first served, the least recently used idle worker retired to make room, workers
-retired for memory and never on a timer, the standby a new script's build takes, and a retired
+retired for memory or an enabled idle timeout, the standby a new script's build takes, and a retired
 script's next build a fresh worker's."""
 
 from __future__ import annotations
@@ -139,6 +139,23 @@ class PoolTest(unittest.TestCase):
         self.assertTrue(b.stopped and not c.stopped)
         self.assertEqual(sorted(w.label for w in pool.processes("worker")), ["a.py", "c.py"])
         self.assertEqual([row["reason"] for row in pool.retired], ["LRU", "LRU"])
+
+    def test_idle_timeout_drains_an_old_worker_without_touching_busy_or_recent_workers(self) -> None:
+        pool = self.pool(3)
+        old, recent, busy = (pool.lease("worker", name, {}) for name in ("old.py", "recent.py", "busy.py"))
+        pool.release(old)
+        pool.release(recent)
+        old.used -= 301
+        busy.used -= 301
+        old.rss = 0.0
+
+        pool.retire_idle(300)
+
+        self.assertTrue(old.stopped)
+        self.assertFalse(recent.stopped)
+        self.assertFalse(busy.stopped)
+        self.assertEqual(pool.retired[0]["reason"], "idle")
+        self.assertIsNot(pool.lease("worker", "old.py", {}), old)
 
     def test_over_the_memory_cap_the_least_recently_used_idle_worker_goes_and_a_busy_one_never(self) -> None:
         pool = self.pool(4, memory=250.0)

@@ -652,7 +652,8 @@ class Mesher:
         # holds now: at most ``workers``, handed over by one dispatching thread (``_dispatch``).
         self._queued: dict[int, collections.deque[_Job]] = {FACT: collections.deque(), MESH: collections.deque()}
         self._running = 0
-        self._wake = threading.Condition()
+        self._used = time.monotonic()
+        self._wake = threading.Condition(self.lock)
         self._dispatcher: threading.Thread | None = None
         self._stopped = False
 
@@ -663,6 +664,7 @@ class Mesher:
         starts only for a job no started one is free for, so an inspection that meshes nothing
         starts the few its batches take."""
         with self.lock:
+            self._used = time.monotonic()
             if self._processes is not None and getattr(self._processes, "_broken", False):
                 self._processes.shutdown(wait=False, cancel_futures=True)  # a child died; rebuild on next use
                 self._processes = None
@@ -730,6 +732,7 @@ class Mesher:
         """A job the pool answered (``done``), or could not take (``error``): its slot free again."""
         with self._wake:
             self._running -= 1
+            self._used = time.monotonic()
             self._wake.notify_all()
         if done is not None and done.cancelled():
             error = concurrent.futures.CancelledError()
@@ -740,6 +743,16 @@ class Mesher:
         else:
             assert done is not None
             job.future.set_result(done.result())
+
+    def retire_idle(self, cutoff: float) -> None:
+        """Detach an idle pool so the next submission can safely create its replacement."""
+        with self._wake:
+            if self._running or any(self._queued.values()) or self._used > cutoff:
+                return
+            pool, self._processes = self._processes, None
+            self._warm = False
+        if pool is not None:
+            pool.shutdown(wait=False)
 
     def stop(self) -> None:
         """Every job waiting cancelled and the pool's processes ended, a busy one too: a pool process
@@ -1087,6 +1100,7 @@ class Server:
         self.foreign_reads: dict[str, concurrent.futures.Future] = {}
         self.foreign_lock = threading.Lock()
         self.reader: concurrent.futures.ProcessPoolExecutor | None = None
+        self.reader_used = time.monotonic()
         # The reader's helpers while reads come at once (``_reading``), the reads under way in the
         # reader and in all, and the let-go of the helpers the last read's end set off.
         self.helpers: concurrent.futures.ProcessPoolExecutor | None = None
@@ -1149,6 +1163,17 @@ class Server:
             started = self.reader is not None
         if not started:
             self._readers().submit(int)
+
+    def retire_idle_workers(self, seconds: float) -> None:
+        """Release the idle geometry and document-reader pools, leaving the viewer online."""
+        cutoff = time.monotonic() - seconds
+        self.mesher.retire_idle(cutoff)
+        with self.foreign_lock:
+            if self.reading["all"] or self.reader_used > cutoff:
+                return
+            reader, self.reader = self.reader, None
+        if reader is not None:
+            reader.shutdown(wait=False)
 
     def stop(self) -> None:
         self.stopping.set()
@@ -1376,12 +1401,17 @@ class Server:
         if path.suffix.lower() in FOREIGN:
             return self._read_step(ident, path)
         if self.isolated:
+            with self.foreign_lock:
+                self.reading["reader"] += 1
+                self.reading["all"] += 1
             try:
                 structure, version, shapes, names = self._readers().submit(_read_document, str(path)).result()
             except concurrent.futures.BrokenExecutor:  # the reader died mid-read
                 with self.foreign_lock:
                     self.reader = None  # the next read starts a reader afresh
                 raise ValueError(f"the reader exited reading {path.name}") from None
+            finally:
+                self._read_done("reader")
             return Served(ident, path, structure, version, shapes, names)
         from cad.engine.document import Loaded
 
@@ -1404,6 +1434,7 @@ class Server:
         """The reader processes: one at a time, each gone after its read (with what the parse
         left in its memory), the next started and warm meanwhile."""
         with self.foreign_lock:
+            self.reader_used = time.monotonic()
             if self.reader is not None and getattr(self.reader, "_broken", False):
                 self.reader.shutdown(wait=False, cancel_futures=True)  # a child died; it serves no one now
                 self.reader = None
@@ -1443,6 +1474,7 @@ class Server:
         with self.foreign_lock:
             if lane == "reader":
                 self.reading["reader"] -= 1
+                self.reader_used = time.monotonic()
             self.reading["all"] -= 1
             if self.reading["all"] or self.helpers is None or self.stopping.is_set():
                 return
