@@ -7,6 +7,7 @@ import { TREE_GLYPH_STROKE, TREE_ROW_INSET_PX, TreeRowLabel, TreeRowSurface } fr
 import { useI18n } from "@cad/ui/i18n";
 import { ageLabel, lastActivity } from "../../lib/age.js";
 import { DOCUMENT_ROW_GLYPH_CLASS, DocumentGlyph } from "./DocumentGlyph.jsx";
+import { compareExplorerRows, ExplorerSort } from "./ExplorerSort.jsx";
 import { useControlUsage } from "../../usage/controls.js";
 
 /** The most the Models tab lists: the Home, one click away, has the rest. */
@@ -46,11 +47,12 @@ function Note({ children, busy = false }) {
  * opens a document (`onOpen`, as the explorer's does); Up and Down move between the rows.
  *
  * @param {{ recent: { list(): Promise<readonly { path: string, name: string, kind?: string, opened?: number | null, updated?: number | null, missing?: boolean }[]> },
- *   current: string, onOpen(path: string): void }} props
+ *   current: string, onOpen(path: string): void, sortable?: boolean }} props
  */
-export function ModelList({ recent, current, onOpen }) {
+export function ModelList({ recent, current, onOpen, sortable = false }) {
   const { t, locale } = useI18n();
   const [listed, setListed] = useState({ rows: null, error: null });
+  const [sort, setSort] = useState("modified");
   const [query, setQueryState] = useState("");
   // A filter begun is a use (`usage/controls.js`); never what it looks for.
   const usage = useControlUsage();
@@ -75,7 +77,11 @@ export function ModelList({ recent, current, onOpen }) {
     event.preventDefault();
     next?.focus();
   };
-  const shown = listed.rows ? modelRows(listed.rows, query) : null;
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = listed.rows && (sortable
+    ? listed.rows.filter(row => built(row) && words.every(word => row.name.toLowerCase().includes(word)))
+      .map(row => ({ ...row, modified: row.updated })).sort(compareExplorerRows(sort, locale))
+    : modelRows(listed.rows, query));
   const now = Date.now();
   let body;
   if (listed.error) body = <Note>{t("explorer.modelsFailed")}</Note>;
@@ -87,10 +93,11 @@ export function ModelList({ recent, current, onOpen }) {
       aria-current={row.path === current ? "true" : undefined} onClick={() => onOpen(row.path)}>
       <DocumentGlyph model={built(row)} path={row.path} className={DOCUMENT_ROW_GLYPH_CLASS} strokeWidth={TREE_GLYPH_STROKE} />
       <TreeRowLabel className="flex-1">{row.name}</TreeRowLabel>
-      <span className="ml-2 shrink-0 text-muted-foreground" data-model-age="">{ageLabel(lastActivity(row), now, t, locale)}</span>
+      <span className="ml-2 shrink-0 text-muted-foreground" data-model-age="">{ageLabel(sortable ? row.updated : lastActivity(row), now, t, locale)}</span>
     </TreeRowSurface>
   </TooltipHint>);
   return <div className="flex min-h-0 flex-1 flex-col" data-model-list="">
+    {sortable && <ExplorerSort value={sort} onChange={setSort} />}
     <TreeFilterInput label={t("explorer.filterModelsLabel")} placeholder={t("explorer.filterModelsPlaceholder")} value={query} onChange={setQuery} onKeyDown={walk} />
     <ScrollArea className="min-h-0 flex-1" viewportClassName="p-1" viewportRef={rows} viewportProps={{ onKeyDown: walk }}>
       {body}

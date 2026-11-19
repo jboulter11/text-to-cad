@@ -1261,6 +1261,16 @@ class CadApp:
         path = query.get("path")
         try:
             answer = search_folder(path, query.get("q")) if query.get("q") is not None else list_folder(path)
+            paths = answer.get("results")
+            if paths is None:
+                paths = [to_posix_path(os.path.join(answer["path"], entry["name"])) for entry in answer["entries"]]
+            modified = {}
+            for entry_path in paths:
+                try:
+                    modified[entry_path] = os.path.getmtime(entry_path)
+                except OSError:
+                    continue
+            answer["modified"] = modified
         except FileNotFoundError:
             raise ApiError(404, f"No folder at {path}", "name a folder that exists, by its absolute path") from None
         except PermissionError:

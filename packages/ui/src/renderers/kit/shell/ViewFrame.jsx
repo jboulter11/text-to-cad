@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useContext, useLayoutEffect, useRef, useState } from "react";
 import { useI18n } from "@cad/ui/i18n";
 import { cn } from "@cad/ui/utils";
 import ViewerAlertCard from "../status/ViewerAlertCard.jsx";
@@ -9,6 +9,7 @@ import PreviewChrome from "../tools/PreviewChrome.jsx";
 import { InspectContext } from "../inspector/inspect.js";
 import { useSelectedDetail } from "../inspector/ItemDetail.jsx";
 import FlatPanel, { FlatPanelPill, useFlatPanelState } from "./FlatPanel.jsx";
+import { ExplorerPaneContext } from "../../../file-viewer/navigation/explorerPane.js";
 import HoverTip, { useFrameHoverTip } from "./HoverTip.jsx";
 import { stripLeft, useStageReach } from "./useStageReach.js";
 import { ViewCornerSideProvider, viewCornerSide } from "./ViewCorner.jsx";
@@ -115,6 +116,10 @@ export default function ViewFrame({ rootRef = null, surface = null, className = 
     width={flat.width} maxWidth={flat.maxWidth} onWidthChange={flat.changeWidth} focusSearch={flat.focusSearch} detail={selectedDetail}
     detailHeight={flat.detailHeight} onDetailHeightChange={flat.changeDetailHeight} /> : null;
 
+  const explorer = useContext(ExplorerPaneContext);
+  const splitSidebar = explorer && !mobile && !toolsHidden && !previewing;
+  const inspectorOpen = Boolean(panelNode && flat.open);
+
   // ---- the strip's column: at the view's centre, reaching back over the docked panel -------------
   useStageReach(stageRef, root);
   const hasQuickEdit = Boolean(quickEdit);
@@ -172,7 +177,12 @@ export default function ViewFrame({ rootRef = null, surface = null, className = 
         event.currentTarget.focus({ preventScroll: true });
         onCanvasPress?.(event);
       }}>
-      {panelNode}
+      {splitSidebar ? <div className="flex h-full min-h-0 shrink-0 flex-col bg-sidebar" data-explorer-sidebar=""
+        style={{ width: Math.min(flat.width, flat.maxWidth) }}>
+        <aside aria-label={t("explorer.modelsAndFiles")} className={cn("flex min-h-0 flex-col overflow-hidden border-r border-border",
+          inspectorOpen ? "basis-1/2 shrink-0 border-b" : "flex-1")}>{explorer}</aside>
+        {panelNode && <div className={cn("min-h-0", inspectorOpen && "flex-1")}>{panelNode}</div>}
+      </div> : panelNode}
       {/* The stage: what the panel leaves of the view. The canvas fills it, so a fit centres in what
           is visible and a change of its size reaches the picture as a plain resize. */}
       <div ref={stageRef} className="@container/cad-viewport pointer-events-none relative min-h-0 min-w-0 flex-1"

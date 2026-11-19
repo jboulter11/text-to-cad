@@ -6,7 +6,7 @@ import type { LanguageSetting } from "../i18n/index.js";
 export type { LanguageSetting };
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
-export interface FileEntry { path: string; name: string; kind: "file" | "directory" }
+export interface FileEntry { path: string; name: string; kind: "file" | "directory"; modified?: number }
 export interface FileMetadata extends FileEntry {
   /**
    * The on-disk file to browse from and act on (its Files, Copy path, Reveal); omitted it is
@@ -81,7 +81,7 @@ export interface FileSource {
   id: string;
   stat: (path: string, options: { signal: AbortSignal }) => Promise<FileMetadata>;
   list?: (directory: string, options: { signal: AbortSignal }) => Promise<readonly FileEntry[]>;
-  search?: (directory: string, query: string, options: { signal: AbortSignal }) => Promise<{ paths: readonly string[]; truncated: boolean }>;
+  search?: (directory: string, query: string, options: { signal: AbortSignal }) => Promise<{ paths: readonly string[]; truncated: boolean; modified?: Readonly<Record<string, number>> }>;
 }
 export interface FileViewerState {
   /**
@@ -234,6 +234,8 @@ export interface FileViewerProps {
    * file's Files starts in its own folder.
    */
   explorerFolder?: string | null;
+  /** Dock the document browser above the model inspector on desktop. */
+  dockExplorer?: boolean;
   /** The folder the explorer is in, each time it changes: the host keeps it for `explorerFolder`. */
   onExplorerFolderChange?(folder: string): void;
   /** The host's notice, shown at the viewport's top-right once the file is on screen (`RendererViewProps.notice`). */

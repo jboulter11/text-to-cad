@@ -12,6 +12,8 @@ import type { FileNavigationAction, FileViewerProps, JsonValue, FileViewerState 
 import { ViewerMobileContext, useViewerMobileMeasure } from "./responsive.js";
 import { ViewerElementContext, ViewerHostContext } from '../host/context.js';
 import { I18nProvider, translator } from "../i18n/index.js";
+import { NameMenu } from "./navigation/ViewerNavbar.jsx";
+import { ExplorerPaneContext } from "./navigation/explorerPane.js";
 import { mayTakeKeyboard } from "./takeKeyboard.js";
 import { FilePanelContext, filePanelOf, withFilePanel } from "./filePanel.js";
 
@@ -26,7 +28,7 @@ class RenderBoundary extends Component<{ children: ReactNode; title: string; onE
  * The complete file view: one file, by its absolute path, under the one navbar. Its only knowledge
  * of formats comes from registrations. With no file it shows the host's home.
  */
-export function FileViewer({ file, host, renderers, state, onStateChange, colorScheme, language, appSettings, update, history, recent, explorerFolder = null, onExplorerFolderChange, notice, navbarActions, fileMenuItems, overlay, onError, presentation, chrome = "page" }: FileViewerProps) {
+export function FileViewer({ file, host, renderers, state, onStateChange, colorScheme, language, appSettings, update, history, recent, explorerFolder = null, dockExplorer = false, onExplorerFolderChange, notice, navbarActions, fileMenuItems, overlay, onError, presentation, chrome = "page" }: FileViewerProps) {
   // The language the host names (`environment.locale`): this frame's own strings, and everything
   // drawn under it (`I18nProvider`), the nodes the host hands it included.
   const locale = host.environment.locale;
@@ -156,6 +158,10 @@ export function FileViewer({ file, host, renderers, state, onStateChange, colorS
     ? { source, folder, onOpen: onOpenFile, onFolderChange: onExplorerFolderChange } : null,
     [navigationPath, folder, source, onOpenFile, onExplorerFolderChange]);
   const recentMenu = useMemo(() => recent && onOpenFile ? { list: () => recent.list(), onOpen: onOpenFile } : null, [recent, onOpenFile]);
+  const dockedBrowser = dockExplorer && !mobile && path && (explorer || recentMenu)
+    ? <NameMenu path={navigationPath ?? path} kind={model ? "model" : "file"} explorer={explorer}
+      recent={recentMenu} onPick={(open: (next: string) => void, next: string) => open(next)} sortable />
+    : null;
   // The logo's app menu: the host's links and the person's settings (Back to home is `onHome`).
   const menu = useMemo(() => host.links || appSettings?.length || colorScheme || language ? { links: host.links, appSettings, colorScheme, language, platform: appearance.platform } : null,
     [host.links, appSettings, colorScheme, language, appearance.platform]);
@@ -168,10 +174,10 @@ export function FileViewer({ file, host, renderers, state, onStateChange, colorS
   const navbar = (Boolean(path) || home) && !appearance.compact && chrome !== "bare" && previewing !== key;
   return <I18nProvider locale={locale}><ViewerMobileContext.Provider value={mobile}><ViewerHostContext.Provider value={host}><ViewerElementContext.Provider value={viewerElement}><div className="text-to-cad-file-viewer text-ui font-normal flex h-full min-h-0 min-w-0 flex-col overflow-hidden" ref={bindElement} data-viewer-layout={mobile ? "mobile" : "desktop"} tabIndex={-1}>
     {navbar ? (path
-      ? <ViewerNavbar onHome={host.navigation.home} menu={menu} history={history} file={navigationPath ?? path} name={shown?.file.name} kind={model ? "model" : "file"} explorer={explorer} recent={recentMenu} fileMenu={fileMenu} trailing={trailing} actions={navbarActions} update={update} />
+      ? <ViewerNavbar onHome={host.navigation.home} menu={menu} history={history} file={navigationPath ?? path} name={shown?.file.name} sortable={dockExplorer} kind={model ? "model" : "file"} explorer={explorer} recent={recentMenu} fileMenu={fileMenu} trailing={trailing} actions={navbarActions} update={update} />
       : <ViewerNavbar menu={menu} history={history} actions={navbarActions} update={update} />) : null}
     <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
-      <div className="min-w-0 flex-1 overflow-hidden">{body}</div>
+      <div className="min-w-0 flex-1 overflow-hidden"><ExplorerPaneContext.Provider value={dockedBrowser}>{body}</ExplorerPaneContext.Provider></div>
       {overlay}
     </div>
   </div></ViewerElementContext.Provider></ViewerHostContext.Provider></ViewerMobileContext.Provider></I18nProvider>;

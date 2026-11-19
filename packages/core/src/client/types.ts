@@ -112,9 +112,9 @@ export interface CadCatalog {
   [key: string]: unknown;
 }
 /** One folder's subfolders and CAD files (`GET /api/v1/local/folder`). */
-export interface CadFolder { path: string; entries: { name: string; kind: 'directory' | 'file' }[]; truncated: boolean }
+export interface CadFolder { path: string; entries: { name: string; kind: 'directory' | 'file' }[]; truncated: boolean; modified?: Record<string, number> }
 /** The CAD files nested under a folder whose path below it holds the query (`GET /api/v1/local/folder?q=`). */
-export interface CadSearch { path: string; results: string[]; truncated: boolean }
+export interface CadSearch { path: string; results: string[]; truncated: boolean; modified?: Record<string, number> }
 export interface CadCatalogSnapshot {
   entries: CadEntry[];
   revision: number;

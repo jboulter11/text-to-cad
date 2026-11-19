@@ -66,11 +66,15 @@ export function createCadFileSource(client: Pick<CadWorkspaceService, 'resolveEn
     },
     async list(directory, { signal }) {
       const folder = await client.folder(directory, { signal });
-      return folder.entries.map(entry => ({ path: joinPath(folder.path, entry.name), name: entry.name, kind: entry.kind }));
+      return folder.entries.map(entry => {
+        const path = joinPath(folder.path, entry.name);
+        const modified = folder.modified?.[path];
+        return { path, name: entry.name, kind: entry.kind, ...(modified === undefined ? {} : { modified }) };
+      });
     },
     async search(directory, query, { signal }) {
       const found = await client.search(directory, query, { signal });
-      return { paths: found.results.map(normalizePath), truncated: found.truncated };
+      return { paths: found.results.map(normalizePath), truncated: found.truncated, ...(found.modified ? { modified: found.modified } : {}) };
     },
   };
 }

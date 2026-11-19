@@ -220,7 +220,7 @@ export default function App({ client, server, tabStore, notice = null, language:
     {/* The engine gone, its notice is the page's one: what is under it (a view's own "can't reach"
         card among it) is out of reach and unheard until it is back. An update's restart says nothing. */}
     <div className="min-h-0 flex-1" inert={(engineGone && !restarting) || undefined} aria-hidden={(engineGone && !restarting) || undefined}>
-    <CadViewer client={client} host={host} tabStore={tabStore} live={live} file={file} onShow={next => { void show(next); }} onShown={shown}
+    <CadViewer dockExplorer client={client} host={host} tabStore={tabStore} live={live} file={file} onShow={next => { void show(next); }} onShown={shown}
       fullSize={file ? <Button variant="ghost" size="sm" onClick={openToolpath}>G-code</Button> : undefined}
       library={library} onThumbnail={client.keepThumbnail} appSettings={appSettings}
       update={updater.notice || updater.phase.phase !== 'idle' ? <UpdateButton notice={updater.notice} phase={updater.phase} onUpdate={updater.update} /> : null}
