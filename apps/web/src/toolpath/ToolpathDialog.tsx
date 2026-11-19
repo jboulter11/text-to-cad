@@ -21,9 +21,9 @@ export function ToolpathDialog({ initialSource, open, hasModel, close, t }: {
   const [source, setSource] = useState(initialSource);
   const [requestedPlate, setRequestedPlate] = useState<string>();
   const [result, setResult] = useState<Preview | { error: string }>();
-  const [index, setIndex] = useState(0);
+  const [selectedLayer, setSelectedLayer] = useState<number>();
   const [view, setView] = useState<{side: 'top' | 'bottom'}>({ side: 'top' });
-  const [cumulative, setCumulative] = useState(false);
+  const [cumulative, setCumulative] = useState(true);
   const picker = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -36,10 +36,15 @@ export function ToolpathDialog({ initialSource, open, hasModel, close, t }: {
   }, [source, requestedPlate]);
 
   const preview = result && !('error' in result) ? result : null;
+  const index = selectedLayer ?? (preview?.layers.length ?? 1) - 1;
   const layer = preview?.layers[index];
   const cameraState = useMemo(() => ({ current: null }), [preview]);
-  const tools = new Set<number>();
-  if (layer) for (let i = 4; i < layer.paths.length; i += 5) tools.add(layer.paths[i]);
+  const layerTools = useMemo(() => preview?.layers.map(layer => {
+    const tools = new Set<number>();
+    for (let i = 4; i < layer.paths.length; i += 5) tools.add(layer.paths[i]);
+    return tools;
+  }), [preview]);
+  const tools = cumulative ? new Set(layerTools?.slice(0, index + 1).flatMap(tools => [...tools])) : layerTools?.[index];
 
   return <Dialog open={open} onOpenChange={open => { if (!open) close(); }}>
     <DialogContent className="max-h-[calc(100svh-2rem)] max-w-[min(68rem,calc(100%-2rem))] overflow-y-auto">
@@ -53,7 +58,7 @@ export function ToolpathDialog({ initialSource, open, hasModel, close, t }: {
       <input ref={picker} type="file" accept=".gcode,.gcode.3mf" hidden onChange={event => {
         const file = event.target.files?.[0];
         if (!file) return;
-        setIndex(0);
+        setSelectedLayer(undefined);
         setRequestedPlate(undefined);
         setView({ side: 'top' });
         if (!/\.(?:gcode|gcode\.3mf)$/i.test(file.name)) {
@@ -70,7 +75,7 @@ export function ToolpathDialog({ initialSource, open, hasModel, close, t }: {
       {preview && layer && <>
         {preview.plates.length > 1 && <label className="flex items-center gap-2">{t('toolpath.plate')}
           <select className="rounded-md border bg-background px-2 py-1" value={preview.plate} onChange={event => {
-            setIndex(0);
+            setSelectedLayer(undefined);
             setResult(undefined);
             setRequestedPlate(event.target.value);
           }}>
@@ -82,12 +87,12 @@ export function ToolpathDialog({ initialSource, open, hasModel, close, t }: {
           label={t('toolpath.canvas')} unavailable={t('toolpath.webgl')} />
         <div className="flex items-center gap-3">
           <Slider className="flex-1" defaultValue={undefined} origin={undefined} min={0} max={Math.max(1, preview.layers.length - 1)} value={[index]}
-            disabled={preview.layers.length < 2} onValueChange={([value]: number[]) => setIndex(value)}
+            disabled={preview.layers.length < 2} onValueChange={([value]: number[]) => setSelectedLayer(value)}
             thumbProps={{ 'aria-label': t('toolpath.layer'), 'aria-valuetext': t('toolpath.layerHeight', { layer: index + 1, total: preview.layers.length, z: layer.z.toFixed(2) }) }} />
           <output className="shrink-0 tabular-nums">{t('toolpath.layerHeight', { layer: index + 1, total: preview.layers.length, z: layer.z.toFixed(2) })}</output>
         </div>
         <div className="flex flex-wrap gap-3" aria-label={t('toolpath.filaments')}>
-          {[...tools].sort((a,b) => a - b).map(tool => <span key={tool} className="flex items-center gap-1.5">
+          {[...(tools ?? [])].sort((a,b) => a - b).map(tool => <span key={tool} className="flex items-center gap-1.5">
             <span className="size-2.5 rounded-sm border border-current/30" aria-hidden="true" style={{ backgroundColor: toolColor(preview.colors, tool) }} />
             {t('toolpath.filament', { number: tool + 1 })}
           </span>)}
