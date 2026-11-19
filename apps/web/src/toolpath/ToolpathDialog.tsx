@@ -43,10 +43,13 @@ export function ToolpathDialog({ initialSource, open, hasModel, close, t }: {
 
   return <Dialog open={open} onOpenChange={open => { if (!open) close(); }}>
     <DialogContent className="max-h-[calc(100svh-2rem)] max-w-[min(68rem,calc(100%-2rem))] overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle>{t('menu.toolpath')}</DialogTitle>
-        <DialogDescription>{source?.name ?? t('toolpath.formats')}</DialogDescription>
-      </DialogHeader>
+      <div className="flex items-start justify-between gap-3">
+        <DialogHeader className="min-w-0">
+          <DialogTitle>{t('menu.toolpath')}</DialogTitle>
+          <DialogDescription className="break-words">{source?.name ?? t('toolpath.formats')}</DialogDescription>
+        </DialogHeader>
+        <DialogClose asChild><Button variant="outline">{t(hasModel ? 'toolpath.model' : 'toolpath.close')}</Button></DialogClose>
+      </div>
       <input ref={picker} type="file" accept=".gcode,.gcode.3mf" hidden onChange={event => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -98,7 +101,6 @@ export function ToolpathDialog({ initialSource, open, hasModel, close, t }: {
           <Button variant={cumulative ? 'default' : 'outline'} aria-pressed={cumulative}
             onClick={() => setCumulative(value => !value)}>{t('toolpath.earlierLayers')}</Button>
         </>}
-        <DialogClose asChild><Button variant="outline" className="ml-auto">{t(hasModel ? 'toolpath.model' : 'toolpath.close')}</Button></DialogClose>
       </div>
     </DialogContent>
   </Dialog>;
