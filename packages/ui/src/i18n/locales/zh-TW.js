@@ -4,6 +4,22 @@
  * character conversion of `zh-CN.js`. Every key here is also in `en.js` (the parity test).
  */
 export default {
+  "menu.toolpath": "G-code 預覽",
+  "toolpath.formats": "選擇 .gcode 或已切片的 .gcode.3mf 檔案。",
+  "toolpath.loading": "正在讀取路徑…",
+  "toolpath.readError": "無法開啟列印檔案。",
+  "toolpath.tooLarge": "預覽上限為 64 MiB。",
+  "toolpath.tooComplex": "此檔案的移動過多，無法預覽。",
+  "toolpath.noExtrusion": "找不到擠出移動。",
+  "toolpath.plate": "列印板",
+  "toolpath.canvas": "擠出路徑",
+  "toolpath.layer": "層",
+  "toolpath.layerHeight": "第 {layer} / {total} 層 · Z {z} mm",
+  "toolpath.filaments": "耗材",
+  "toolpath.filament": "耗材 {number}",
+  "toolpath.open": "選擇檔案",
+  "toolpath.underside": "從下方檢視",
+  "toolpath.close": "關閉",
   "board.text.board": "電路板",
   "board.text.copper": "銅層",
   "board.text.assembly": "組裝",

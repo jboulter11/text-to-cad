@@ -6,6 +6,22 @@
  * fills in.
  */
 export default {
+  "menu.toolpath": "G-code preview",
+  "toolpath.formats": "Choose a .gcode or sliced .gcode.3mf file.",
+  "toolpath.loading": "Reading toolpaths…",
+  "toolpath.readError": "Could not open the print file.",
+  "toolpath.tooLarge": "The preview limit is 64 MiB.",
+  "toolpath.tooComplex": "This file has too many moves to preview.",
+  "toolpath.noExtrusion": "No extrusion moves were found.",
+  "toolpath.plate": "Plate",
+  "toolpath.canvas": "Extrusion toolpaths",
+  "toolpath.layer": "Layer",
+  "toolpath.layerHeight": "Layer {layer} / {total} · Z {z} mm",
+  "toolpath.filaments": "Filaments",
+  "toolpath.filament": "Filament {number}",
+  "toolpath.open": "Choose file",
+  "toolpath.underside": "View from below",
+  "toolpath.close": "Close",
   "board.text.board": "Board",
   "board.text.copper": "Copper",
   "board.text.assembly": "Assembly",

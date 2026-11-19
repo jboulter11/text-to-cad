@@ -3,6 +3,22 @@
  * Brand names and each language's own name stay as that language writes them.
  */
 export default {
+  "menu.toolpath": "G-code プレビュー",
+  "toolpath.formats": ".gcode またはスライス済みの .gcode.3mf を選択してください。",
+  "toolpath.loading": "ツールパスを読み込み中…",
+  "toolpath.readError": "印刷ファイルを開けませんでした。",
+  "toolpath.tooLarge": "プレビューの上限は 64 MiB です。",
+  "toolpath.tooComplex": "移動が多すぎるためプレビューできません。",
+  "toolpath.noExtrusion": "押出移動が見つかりませんでした。",
+  "toolpath.plate": "プレート",
+  "toolpath.canvas": "押出ツールパス",
+  "toolpath.layer": "レイヤー",
+  "toolpath.layerHeight": "レイヤー {layer} / {total} · Z {z} mm",
+  "toolpath.filaments": "フィラメント",
+  "toolpath.filament": "フィラメント {number}",
+  "toolpath.open": "ファイルを選択",
+  "toolpath.underside": "下から表示",
+  "toolpath.close": "閉じる",
   "board.text.board": "基板",
   "board.text.copper": "銅箔",
   "board.text.assembly": "実装",

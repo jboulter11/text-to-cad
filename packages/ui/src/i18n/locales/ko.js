@@ -3,6 +3,22 @@
  * Brand names and each language's own name stay as that language writes them.
  */
 export default {
+  "menu.toolpath": "G-code 미리보기",
+  "toolpath.formats": ".gcode 또는 슬라이스된 .gcode.3mf 파일을 선택하세요.",
+  "toolpath.loading": "툴패스를 읽는 중…",
+  "toolpath.readError": "출력 파일을 열 수 없습니다.",
+  "toolpath.tooLarge": "미리보기 제한은 64 MiB입니다.",
+  "toolpath.tooComplex": "이동이 너무 많아 미리 볼 수 없습니다.",
+  "toolpath.noExtrusion": "압출 이동을 찾을 수 없습니다.",
+  "toolpath.plate": "플레이트",
+  "toolpath.canvas": "압출 툴패스",
+  "toolpath.layer": "레이어",
+  "toolpath.layerHeight": "레이어 {layer} / {total} · Z {z} mm",
+  "toolpath.filaments": "필라멘트",
+  "toolpath.filament": "필라멘트 {number}",
+  "toolpath.open": "파일 선택",
+  "toolpath.underside": "아래에서 보기",
+  "toolpath.close": "닫기",
   "board.text.board": "기판",
   "board.text.copper": "구리",
   "board.text.assembly": "조립",

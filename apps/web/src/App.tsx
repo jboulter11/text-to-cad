@@ -18,6 +18,7 @@ import { browserClipboard, browserClipboardSupportsImages } from './host/clipboa
 import { createWebPromptContext } from './host/promptContext';
 import { useViewerLinks } from './host/viewerLinks.js';
 import { EngineStopped } from './EngineStopped';
+import { linkedToolpath, ToolpathDialog } from './toolpath/ToolpathDialog';
 import { readDefaultFileParam, readDocumentId, writeDocumentId } from './client/workbench/fileParam.js';
 import { applyColorSchemeToDocument, resolveColorSchemeMode } from './client/ui/colorScheme.js';
 
@@ -71,7 +72,10 @@ export default function App({ client, server, tabStore, notice = null, language:
   const promptFiles = useMemo(() => createHttpPromptFiles({ origin: client.origin }), [client]);
   // The view on screen, for the library's pictures of what was opened.
   const live = useMemo(() => createLiveRegistry(), []);
-  const links = useViewerLinks();
+  const baseLinks = useViewerLinks();
+  const [toolpathSource] = useState(() => linkedToolpath(window.location.search));
+  const [toolpathOpen, setToolpathOpen] = useState(Boolean(toolpathSource));
+  const links = useMemo(() => ({ ...baseLinks, openToolpath: () => setToolpathOpen(true) }), [baseLinks]);
   // The document the URL names; anything else is the home (an old link's form included), and the
   // URL says `/`.
   const [file, setFile] = useState(() => readDocumentId() || '');
@@ -199,5 +203,11 @@ export default function App({ client, server, tabStore, notice = null, language:
       update={updater.notice || updater.phase.phase !== 'idle' ? <UpdateButton notice={updater.notice} phase={updater.phase} onUpdate={updater.update} /> : null}
       colorScheme={colorScheme} language={language}
       whatsNew={engineGone || restarting ? undefined : { entry: whatsNew.entry, onDismiss: whatsNew.dismiss }} />
+    {toolpathOpen && <ToolpathDialog initialSource={toolpathSource} t={sayRef.current} close={() => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('toolpath');
+      window.history.replaceState(window.history.state, '', url);
+      setToolpathOpen(false);
+    }} />}
   </div></div>;
 }

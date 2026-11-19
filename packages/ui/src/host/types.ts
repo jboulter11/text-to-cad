@@ -59,6 +59,7 @@ export interface ViewerLinks {
    * this; without it a link opens the ordinary way, in a new tab.
    */
   open?(url: string): Promise<void>;
+  openToolpath?(): void;
 }
 /** One export the page started and has not yet handed to the browser: its request and the name it downloads as. */
 export interface ExportRecord { request: import('@cad/core/client').ExportRequest; filename: string }

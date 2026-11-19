@@ -4,6 +4,22 @@
  * Brand names (GitHub, Discord, Finder) and each language's own name stay as that language writes them.
  */
 export default {
+  "menu.toolpath": "G-code 预览",
+  "toolpath.formats": "选择 .gcode 或已切片的 .gcode.3mf 文件。",
+  "toolpath.loading": "正在读取走刀路径…",
+  "toolpath.readError": "无法打开打印文件。",
+  "toolpath.tooLarge": "预览上限为 64 MiB。",
+  "toolpath.tooComplex": "此文件的移动过多，无法预览。",
+  "toolpath.noExtrusion": "未找到挤出移动。",
+  "toolpath.plate": "打印板",
+  "toolpath.canvas": "挤出路径",
+  "toolpath.layer": "层",
+  "toolpath.layerHeight": "第 {layer} / {total} 层 · Z {z} mm",
+  "toolpath.filaments": "耗材",
+  "toolpath.filament": "耗材 {number}",
+  "toolpath.open": "选择文件",
+  "toolpath.underside": "从下方查看",
+  "toolpath.close": "关闭",
   "board.text.board": "电路板",
   "board.text.copper": "铜层",
   "board.text.assembly": "装配",
