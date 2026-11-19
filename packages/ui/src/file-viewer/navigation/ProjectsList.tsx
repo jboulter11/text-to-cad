@@ -9,6 +9,7 @@ type Listing = NonNullable<FileSource["list"]>;
 type Expansion = { expanded: ReadonlySet<string>; onExpandedChange(key: string, open: boolean): void };
 type Open = (model: string, toolpath?: string, showToolpath?: boolean) => void;
 type Project = { name: string; modified?: number; printed?: FileEntry; models: RecentDocument[] };
+const legacyVersion = (name: string) => name.match(/_v(\d+)(?=[_.-])/i)?.[1];
 const isSlice = (name: string) => /\.gcode(?:\.3mf)?$/i.test(name);
 const isModel = (name: string) => !isSlice(name) && /\.(?:3mf|stl|step|stp|xbf|glb|obj)$/i.test(name);
 const groupStyle = "group flex w-full cursor-pointer list-none items-center gap-1.5 rounded-sm px-2 py-1 text-left text-xs hover:bg-sidebar-accent [&::-webkit-details-marker]:hidden";
@@ -74,7 +75,7 @@ function ProjectRow({ project, list, onOpen, sort, expanded, onExpandedChange, a
   }
   for (const entry of entries ?? []) {
     if (entry.kind !== "file") continue;
-    const version = entry.name.match(/_v(\d+)(?=[_.-])/i)?.[1];
+    const version = legacyVersion(entry.name);
     if (!version) { loose.push(entry); continue; }
     const key = "v" + version;
     const group = versions.get(key);
@@ -135,11 +136,33 @@ export function ProjectsList({ root, list, recent, onOpen, expanded, onExpandedC
     void recent?.list().then(found => { if (active) setModels(found); }, () => {});
     return () => { active = false; };
   }, [recent]);
+  const prefix = root.replace(/\/$/, "") + "/";
+  useEffect(() => {
+    if (activePath.startsWith("/prints/")) {
+      const [project, folder, version] = activePath.slice("/prints/".length).split("/");
+      if (!project || !folder) return;
+      onExpandedChange(project, true);
+      if (folder === "releases" && /^v\d+$/i.test(version ?? "")) {
+        onExpandedChange(`${project}/${version.toLowerCase()}`, true);
+      } else if (!version) {
+        const number = legacyVersion(folder);
+        if (number) onExpandedChange(`${project}/v${number}`, true);
+      }
+      return;
+    }
+    const script = models.find(model => model.path === activePath && model.kind === "model" && !model.missing)?.script;
+    if (!script?.startsWith(prefix)) return;
+    const relative = script.slice(prefix.length);
+    if (!relative.includes("/")) return;
+    const project = relative.split("/")[0];
+    onExpandedChange(project, true);
+    onExpandedChange(`${project}/working`, true);
+  }, [activePath, models, onExpandedChange, prefix]);
+
   const projects = new Map<string, Project>();
   for (const entry of printed ?? []) {
     if (entry.kind === "directory") projects.set(entry.name, { name: entry.name, modified: entry.modified, printed: entry, models: [] });
   }
-  const prefix = root.replace(/\/$/, "") + "/";
   for (const model of models) {
     if (model.kind !== "model" || model.missing || !model.script?.startsWith(prefix)) continue;
     const relative = model.script.slice(prefix.length);
