@@ -170,7 +170,7 @@ export function FileViewer({ file, host, renderers, state, onStateChange, colorS
       return next;
     });
   }, []);
-  const projects = openProjectArtifact && projectsRoot && source.list ? <ProjectsList root={projectsRoot} activePath={activeToolpath ?? navigationPath ?? path ?? ""}
+  const projects = openProjectArtifact && projectsRoot && source.list ? <ProjectsList root={projectsRoot} activePath={(showAlternateView ? activeToolpath : navigationPath ?? path) ?? ""}
     list={source.list} recent={recent} onOpen={(model, toolpath, showToolpath) => {
       setBrowserTab("projects");
       openProjectArtifact(model, toolpath, showToolpath);
