@@ -308,7 +308,7 @@ export default {
   "explorer.sortName": "Name",
   "explorer.projects": "Projects",
   "explorer.filterProjects": "Filter projects",
-  "explorer.workingModel": "Working model",
+  "explorer.working": "Working",
   "explorer.models": "Models",
   "explorer.files": "Files",
   "explorer.noModels": "No models yet",

@@ -296,7 +296,7 @@ export default {
   "explorer.sortName": "名稱",
   "explorer.projects": "專案",
   "explorer.filterProjects": "篩選專案",
-  "explorer.workingModel": "工作模型",
+  "explorer.working": "工作中",
   "explorer.models": "模型",
   "explorer.files": "檔案",
   "explorer.noModels": "還沒有模型",

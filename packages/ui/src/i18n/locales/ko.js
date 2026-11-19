@@ -295,7 +295,7 @@ export default {
   "explorer.sortName": "이름",
   "explorer.projects": "프로젝트",
   "explorer.filterProjects": "프로젝트 필터",
-  "explorer.workingModel": "작업 모델",
+  "explorer.working": "작업 중",
   "explorer.models": "모델",
   "explorer.files": "파일",
   "explorer.noModels": "아직 모델이 없습니다",

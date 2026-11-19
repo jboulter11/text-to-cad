@@ -87,8 +87,13 @@ function ProjectRow({ project, list, onOpen }: { project: Project; list: Listing
       <span className="truncate">{project.name}</span>
     </summary>
     {open && <div className="pl-3">
-      {project.models.map(model => <button key={model.path} className={entryStyle}
-        onClick={() => onOpen(model.path)}>{t("explorer.workingModel")} · {model.name}</button>)}
+      {project.models.length > 0 && <section aria-label={t("explorer.working")}>
+        <h3 className="px-2 py-1 text-xs font-medium text-muted-foreground">{t("explorer.working")}</h3>
+        <div className="pl-3">
+          {project.models.map(model => <button key={model.path} className={entryStyle}
+            onClick={() => onOpen(model.path)}>{model.name}</button>)}
+        </div>
+      </section>}
       {[...versions].sort(([a], [b]) => versionNumber(b) - versionNumber(a)).map(([name, version]) =>
         <Version key={name} name={name} list={list} onOpen={onOpen} {...version} />)}
       <Artifacts entries={loose} onOpen={onOpen} />
