@@ -4,6 +4,10 @@
  * character conversion of `zh-CN.js`. Every key here is also in `en.js` (the parity test).
  */
 export default {
+  "toolpath.model": "模型",
+  "toolpath.resetView": "俯視圖",
+  "toolpath.earlierLayers": "較早的層",
+  "toolpath.webgl": "3D 路徑預覽需要 WebGL。",
   "menu.toolpath": "G-code 預覽",
   "toolpath.formats": "選擇 .gcode 或已切片的 .gcode.3mf 檔案。",
   "toolpath.loading": "正在讀取路徑…",

@@ -4,6 +4,10 @@
  * Brand names (GitHub, Discord, Finder) and each language's own name stay as that language writes them.
  */
 export default {
+  "toolpath.model": "模型",
+  "toolpath.resetView": "俯视图",
+  "toolpath.earlierLayers": "较早的层",
+  "toolpath.webgl": "3D 走刀预览需要 WebGL。",
   "menu.toolpath": "G-code 预览",
   "toolpath.formats": "选择 .gcode 或已切片的 .gcode.3mf 文件。",
   "toolpath.loading": "正在读取走刀路径…",

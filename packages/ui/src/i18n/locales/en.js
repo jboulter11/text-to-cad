@@ -6,6 +6,10 @@
  * fills in.
  */
 export default {
+  "toolpath.model": "Model",
+  "toolpath.resetView": "Top view",
+  "toolpath.earlierLayers": "Earlier layers",
+  "toolpath.webgl": "3D toolpath preview requires WebGL.",
   "menu.toolpath": "G-code preview",
   "toolpath.formats": "Choose a .gcode or sliced .gcode.3mf file.",
   "toolpath.loading": "Reading toolpaths…",

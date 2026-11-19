@@ -3,6 +3,10 @@
  * Brand names and each language's own name stay as that language writes them.
  */
 export default {
+  "toolpath.model": "모델",
+  "toolpath.resetView": "위에서 보기",
+  "toolpath.earlierLayers": "이전 레이어",
+  "toolpath.webgl": "3D 툴패스 미리보기에는 WebGL이 필요합니다.",
   "menu.toolpath": "G-code 미리보기",
   "toolpath.formats": ".gcode 또는 슬라이스된 .gcode.3mf 파일을 선택하세요.",
   "toolpath.loading": "툴패스를 읽는 중…",

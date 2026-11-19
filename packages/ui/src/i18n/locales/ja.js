@@ -3,6 +3,10 @@
  * Brand names and each language's own name stay as that language writes them.
  */
 export default {
+  "toolpath.model": "モデル",
+  "toolpath.resetView": "上から表示",
+  "toolpath.earlierLayers": "前のレイヤー",
+  "toolpath.webgl": "3D ツールパスの表示には WebGL が必要です。",
   "menu.toolpath": "G-code プレビュー",
   "toolpath.formats": ".gcode またはスライス済みの .gcode.3mf を選択してください。",
   "toolpath.loading": "ツールパスを読み込み中…",

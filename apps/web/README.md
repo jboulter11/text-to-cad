@@ -77,13 +77,17 @@ and assets, so the app does not scan another package's source.
 
 Open **G-code preview** from the app menu to inspect the extrusion paths in a
 plain `.gcode` file or a Bambu Studio `.gcode.3mf` archive. Use the layer
-slider to scrub the slice. **View from below** shows the contact face of a
-face-down print. Pick the plate if the archive has more than one.
+slider to scrub the slice. Drag to orbit, right-drag to pan, and scroll or pinch
+to zoom. **View from below** shows the contact face of a face-down print.
+**Earlier layers** builds up the print through the selected layer. Pick the
+plate if the archive has more than one.
 
 Local selections are read in the browser. To link to a slice on the CAD
 server, set the viewer URL's `toolpath` query parameter to the URL-encoded
 absolute path to an accessible `.gcode.3mf`, alongside the normal viewer
-credentials. The preview uses the existing authenticated file endpoint.
+credentials. Use a model's viewer URL to pair the model with its slice.
+The **Model** and **G-code** buttons switch views and retain the selected
+layer. The preview uses the existing authenticated file endpoint.
 
 ## Launching
 

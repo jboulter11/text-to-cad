@@ -18,6 +18,7 @@ import { browserClipboard, browserClipboardSupportsImages } from './host/clipboa
 import { createWebPromptContext } from './host/promptContext';
 import { useViewerLinks } from './host/viewerLinks.js';
 import { EngineStopped } from './EngineStopped';
+import { Button } from '@cad/ui/primitives/button';
 import { linkedToolpath, ToolpathDialog } from './toolpath/ToolpathDialog';
 import { readDefaultFileParam, readDocumentId, writeDocumentId } from './client/workbench/fileParam.js';
 import { applyColorSchemeToDocument, resolveColorSchemeMode } from './client/ui/colorScheme.js';
@@ -74,8 +75,16 @@ export default function App({ client, server, tabStore, notice = null, language:
   const live = useMemo(() => createLiveRegistry(), []);
   const baseLinks = useViewerLinks();
   const [toolpathSource] = useState(() => linkedToolpath(window.location.search));
-  const [toolpathOpen, setToolpathOpen] = useState(Boolean(toolpathSource));
-  const links = useMemo(() => ({ ...baseLinks, openToolpath: () => setToolpathOpen(true) }), [baseLinks]);
+  const [toolpathOpen, setToolpathOpen] = useState(() => Boolean(toolpathSource) && new URLSearchParams(window.location.search).get('view') !== 'model');
+  const openToolpath = useCallback(() => {
+    if (toolpathSource) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('view');
+      window.history.replaceState(window.history.state, '', url);
+    }
+    setToolpathOpen(true);
+  }, [toolpathSource]);
+  const links = useMemo(() => ({ ...baseLinks, openToolpath }), [baseLinks, openToolpath]);
   // The document the URL names; anything else is the home (an old link's form included), and the
   // URL says `/`.
   const [file, setFile] = useState(() => readDocumentId() || '');
@@ -199,15 +208,16 @@ export default function App({ client, server, tabStore, notice = null, language:
         card among it) is out of reach and unheard until it is back. An update's restart says nothing. */}
     <div className="min-h-0 flex-1" inert={(engineGone && !restarting) || undefined} aria-hidden={(engineGone && !restarting) || undefined}>
     <CadViewer client={client} host={host} tabStore={tabStore} live={live} file={file} onShow={next => { void show(next); }} onShown={shown}
+      fullSize={file ? <Button variant="ghost" size="sm" onClick={openToolpath}>G-code</Button> : undefined}
       library={library} onThumbnail={client.keepThumbnail} appSettings={appSettings}
       update={updater.notice || updater.phase.phase !== 'idle' ? <UpdateButton notice={updater.notice} phase={updater.phase} onUpdate={updater.update} /> : null}
       colorScheme={colorScheme} language={language}
       whatsNew={engineGone || restarting ? undefined : { entry: whatsNew.entry, onDismiss: whatsNew.dismiss }} />
-    {toolpathOpen && <ToolpathDialog initialSource={toolpathSource} t={sayRef.current} close={() => {
+    <ToolpathDialog initialSource={toolpathSource} open={toolpathOpen} hasModel={Boolean(file)} t={sayRef.current} close={() => {
       const url = new URL(window.location.href);
-      url.searchParams.delete('toolpath');
+      if (toolpathSource) url.searchParams.set('view', 'model');
       window.history.replaceState(window.history.state, '', url);
       setToolpathOpen(false);
-    }} />}
+    }} />
   </div></div>;
 }
