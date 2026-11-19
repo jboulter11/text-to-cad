@@ -21,7 +21,7 @@ export default {
   "toolpath.canvas": "Extrusion toolpaths",
   "toolpath.layer": "Layer",
   "toolpath.layerHeight": "Layer {layer} / {total} · Z {z} mm",
-  "toolpath.filamentColors": "Filament colors",
+  "toolpath.heightColors": "Color by height",
   "toolpath.filaments": "Filaments",
   "toolpath.filament": "Filament {number}",
   "toolpath.open": "Choose file",

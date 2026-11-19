@@ -24,23 +24,26 @@ self.onmessage = async ({ data }) => {
       .sort((a,b) => Number(a) - Number(b));
     if (!plates.length) throw new Error('noExtrusion');
     let colors = [];
+    let lineWidth;
     const settings = files['Metadata/project_settings.config'];
     if (settings) {
       const config = JSON.parse(new TextDecoder().decode(settings));
       if (Array.isArray(config.filament_colour)) colors = config.filament_colour;
+      const configuredWidth = Number(config.line_width);
+      if (Number.isFinite(configuredWidth) && configuredWidth > 0) lineWidth = configuredWidth;
     }
     const selected = plates.includes(data.plate) ? data.plate : plates[0];
     const member = Object.keys(files).find(name => plateName.exec(name)?.[1] === selected);
-    sendPlate(selected, new TextDecoder().decode(files[member]), colors, plates);
+    sendPlate(selected, new TextDecoder().decode(files[member]), colors, plates, lineWidth);
   } catch (error) {
     const known = ['tooLarge', 'tooComplex', 'noExtrusion', 'readError'];
     self.postMessage({ error: known.includes(error.message) ? error.message : 'readError' });
   }
 };
 
-function sendPlate(plate, text, colors, plates = ['1']) {
+function sendPlate(plate, text, colors, plates = ['1'], lineWidth = 0.42) {
   const result = parseToolpaths(text, colors);
-  self.postMessage({ plate, plates, ...result }, result.layers.map(layer => layer.paths.buffer));
+  self.postMessage({ plate, plates, lineWidth, ...result }, result.layers.map(layer => layer.paths.buffer));
 }
 
 async function fetchArchive(path) {

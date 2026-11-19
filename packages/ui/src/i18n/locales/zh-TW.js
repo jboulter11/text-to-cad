@@ -19,7 +19,7 @@ export default {
   "toolpath.canvas": "擠出路徑",
   "toolpath.layer": "層",
   "toolpath.layerHeight": "第 {layer} / {total} 層 · Z {z} mm",
-  "toolpath.filamentColors": "耗材顏色",
+  "toolpath.heightColors": "依高度著色",
   "toolpath.filaments": "耗材",
   "toolpath.filament": "耗材 {number}",
   "toolpath.open": "選擇檔案",

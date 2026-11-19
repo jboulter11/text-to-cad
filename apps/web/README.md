@@ -87,7 +87,9 @@ server, set the viewer URL's `toolpath` query parameter to the URL-encoded
 absolute path to an accessible `.gcode.3mf`, alongside the normal viewer
 credentials. Use a model's viewer URL to pair the model with its slice.
 The preview opens at the last layer with earlier layers visible and paths
-colored by height. Turn on **Filament colors** to see the slice's tool colors.
+in the slice's filament colors. Turn on **Color by height** to use the legacy
+gradient. The preview uses the archive's nominal line width when available and
+falls back to 0.42 mm for plain G-code or archives without a usable width.
 
 The **Model** and **G-code** buttons switch views and retain the selected
 layer. The preview uses the existing authenticated file endpoint.
