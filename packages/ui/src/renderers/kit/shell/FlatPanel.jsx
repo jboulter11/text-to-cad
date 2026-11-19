@@ -63,7 +63,7 @@ export const FLAT_PANEL_OPEN_PX = 1024;
  *   `reach`: where the strip starts, px from the view's left edge (`ViewFrame.jsx` measures it): the panel
  *   is at most as wide as leaves its head an inset clear of the strip, and never wider than half the view.
  */
-export function useFlatPanelState({ frameRef, mobile, enabled, kind, toolStack, onToolStackChange, compact = false, reach = null }) {
+export function useFlatPanelState({ frameRef, mobile, enabled, kind, toolStack, onToolStackChange, compact = false, reach = null, openByDefault = false }) {
   const [frameWidth, setFrameWidth] = useState(0);
   useLayoutEffect(() => {
     const element = frameRef.current;
@@ -106,7 +106,7 @@ export function useFlatPanelState({ frameRef, mobile, enabled, kind, toolStack, 
   const legacyTab = initial.adopted ? legacyFilePanelTab(initial.tabs, kind) : undefined;
   useEffect(() => { if (legacyTab && panelRef.current.tab === undefined) change({ tab: legacyTab }); }, [legacyTab, change]);
   const wide = !(frameWidth && frameWidth < FLAT_PANEL_OPEN_PX);
-  const open = enabled && (mode === "page" ? pageOpen : (panel.open ?? wide));
+  const open = enabled && (mode === "page" ? pageOpen : (panel.open ?? (openByDefault || wide)));
   const setOpen = useCallback(next => {
     if (mode === "page") { setPageOpen(next); return; }
     change({ open: Boolean(next) });

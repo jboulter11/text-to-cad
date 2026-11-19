@@ -9,7 +9,7 @@ import PreviewChrome from "../tools/PreviewChrome.jsx";
 import { InspectContext } from "../inspector/inspect.js";
 import { useSelectedDetail } from "../inspector/ItemDetail.jsx";
 import FlatPanel, { FlatPanelPill, useFlatPanelState } from "./FlatPanel.jsx";
-import { ExplorerPaneContext } from "../../../file-viewer/navigation/explorerPane.js";
+import { AlternateViewportContext, ExplorerPaneContext } from "../../../file-viewer/navigation/explorerPane.js";
 import HoverTip, { useFrameHoverTip } from "./HoverTip.jsx";
 import { stripLeft, useStageReach } from "./useStageReach.js";
 import { ViewCornerSideProvider, viewCornerSide } from "./ViewCorner.jsx";
@@ -102,6 +102,8 @@ export default function ViewFrame({ rootRef = null, surface = null, className = 
   const [cornerSide, setCornerSide] = useState("right");
 
   // ---- the panel: docked, open at first in a wide view; none on a phone --------------------------
+  const explorer = useContext(ExplorerPaneContext);
+  const alternate = useContext(AlternateViewportContext);
   const sided = Boolean(panel && (panel.sections || panel.tabs?.length)) && !mobile;
   // What is picked, under the panel's lists; what a press would pick, beside the pointer.
   const selectedDetail = useSelectedDetail(sided ? inspect : null);
@@ -109,14 +111,13 @@ export default function ViewFrame({ rootRef = null, surface = null, className = 
   // Where the strip starts, from the view's left edge (measured below): the panel's head stays left of it.
   const [stripReach, setStripReach] = useState(null);
   const flat = useFlatPanelState({ frameRef: root, mobile, enabled: sided && !toolsHidden, kind: panel?.kind ?? "", toolStack: layout, onToolStackChange: onLayoutChange,
-    compact: Boolean(compact), reach: stripReach });
+    compact: Boolean(compact), reach: stripReach, openByDefault: Boolean(explorer) });
   if (panelControl) panelControl.current = previewing ? null : flat.control;
   const panelNode = sided && !toolsHidden ? <FlatPanel mode="docked" open={flat.open} hidden={previewing} onClose={() => flat.setOpen(false)}
     label={panel.label} searchLabel={panel.searchLabel} tabs={panel.tabs ?? null} sections={panel.sections ?? null} tab={flat.tab} onTabChange={flat.changeTab}
     width={flat.width} maxWidth={flat.maxWidth} onWidthChange={flat.changeWidth} focusSearch={flat.focusSearch} detail={selectedDetail}
     detailHeight={flat.detailHeight} onDetailHeightChange={flat.changeDetailHeight} /> : null;
 
-  const explorer = useContext(ExplorerPaneContext);
   const splitSidebar = explorer && !mobile && !toolsHidden && !previewing;
   const inspectorOpen = Boolean(panelNode && flat.open);
 
@@ -181,12 +182,13 @@ export default function ViewFrame({ rootRef = null, surface = null, className = 
         style={{ width: Math.min(flat.width, flat.maxWidth) }}>
         <aside aria-label={t("explorer.modelsAndFiles")} className={cn("flex min-h-0 flex-col overflow-hidden border-r border-border",
           inspectorOpen ? "basis-1/2 shrink-0 border-b" : "flex-1")}>{explorer}</aside>
-        {panelNode && <div className={cn("min-h-0", inspectorOpen && "flex-1")}>{panelNode}</div>}
+        {panelNode && <div className={cn("min-h-0", inspectorOpen && "relative flex-1 overflow-hidden")}>{panelNode}</div>}
       </div> : panelNode}
       {/* The stage: what the panel leaves of the view. The canvas fills it, so a fit centres in what
           is visible and a change of its size reaches the picture as a plain resize. */}
       <div ref={stageRef} className="@container/cad-viewport pointer-events-none relative min-h-0 min-w-0 flex-1"
         data-cad-canvas={stageColor ?? ""} style={stageColor ? { backgroundColor: stageColor } : undefined}>
+        <div className="absolute inset-0" inert={alternate?.active || undefined} hidden={alternate?.active}>
         <div ref={canvasBoxRef} className="pointer-events-auto absolute inset-0" aria-busy={busy === undefined ? undefined : busy ? "true" : "false"}
           data-cad-canvas-box="" {...hoverTip.handlers}>
           {children}
@@ -222,6 +224,9 @@ export default function ViewFrame({ rootRef = null, surface = null, className = 
         <ViewerLoadingOverlay loading={loading} operationKey={file} />
         {/* The alert card, last: over the tools, which a warning the view survives keeps on screen. */}
         {previewing || !alert ? null : <ViewerAlertCard {...alert} file={alert.file ?? file} />}
+        </div>
+        {alternate && <div ref={alternate.attach} className="pointer-events-auto absolute inset-0 z-30"
+          hidden={!alternate.active} />}
       </div>
     </div>
     </InspectContext.Provider>

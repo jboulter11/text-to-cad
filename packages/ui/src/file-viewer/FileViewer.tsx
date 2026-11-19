@@ -1,4 +1,5 @@
 import { TooltipHint } from "@cad/ui/primitives/tooltip";
+import { createPortal } from "react-dom";
 import { FileText } from "lucide-react";
 import { isDocumentId } from "@cad/core/lib/cadRefs.js";
 import { Component, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -14,7 +15,7 @@ import { ViewerElementContext, ViewerHostContext } from '../host/context.js';
 import { I18nProvider, translator } from "../i18n/index.js";
 import { ProjectsList } from "./navigation/ProjectsList.js";
 import { NameMenu } from "./navigation/ViewerNavbar.jsx";
-import { ExplorerPaneContext } from "./navigation/explorerPane.js";
+import { AlternateViewportContext, ExplorerPaneContext } from "./navigation/explorerPane.js";
 import { mayTakeKeyboard } from "./takeKeyboard.js";
 import { FilePanelContext, filePanelOf, withFilePanel } from "./filePanel.js";
 
@@ -188,18 +189,25 @@ export function FileViewer({ file, host, renderers, state, onStateChange, colorS
   // and actions, each where it is over a file — never over a view drawn small with no chrome
   // (`compact`: an offscreen picture), never where the host asks for the view alone (`chrome: "bare"`),
   // and not while the renderer's Preview is up, which draws its own bar in its place.
+  const [alternateOutlet, setAlternateOutlet] = useState<HTMLDivElement | null>(null);
+  const alternateContext = useMemo(() => alternateView ? { active: showAlternateView, attach: setAlternateOutlet } : null,
+    [Boolean(alternateView), showAlternateView]);
+  const standaloneAlternate = showAlternateView && !alternateOutlet;
+  const hasDockedBrowser = Boolean(dockedBrowser && (alternateOutlet || standaloneAlternate));
   const home = loaded.status === "empty" && Boolean(presentation?.home);
   const navbar = (Boolean(path) || home) && !appearance.compact && chrome !== "bare" && previewing !== key;
   return <I18nProvider locale={locale}><ViewerMobileContext.Provider value={mobile}><ViewerHostContext.Provider value={host}><ViewerElementContext.Provider value={viewerElement}><div className="text-to-cad-file-viewer text-ui font-normal flex h-full min-h-0 min-w-0 flex-col overflow-hidden" ref={bindElement} data-viewer-layout={mobile ? "mobile" : "desktop"} tabIndex={-1}>
     {navbar ? (path
-      ? <ViewerNavbar onHome={host.navigation.home} menu={menu} history={history} file={navigationPath ?? path} name={shown?.file.name} sortable={dockExplorer} projects={mobile ? projects : null} kind={model ? "model" : "file"} explorer={explorer} recent={recentMenu} fileMenu={fileMenu} trailing={trailing} actions={navbarActions} update={update} />
+      ? <ViewerNavbar onHome={host.navigation.home} menu={menu} history={history} file={navigationPath ?? path} name={shown?.file.name} sortable={dockExplorer} projects={mobile ? projects : null} kind={model ? "model" : "file"} explorer={hasDockedBrowser ? null : explorer} recent={hasDockedBrowser ? null : recentMenu} fileMenu={fileMenu} trailing={trailing} actions={navbarActions} update={update} />
       : <ViewerNavbar menu={menu} history={history} actions={navbarActions} update={update} />) : null}
     <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
-      <div className="min-w-0 flex-1 overflow-hidden" style={showAlternateView ? { display: "none" } : undefined}>
-        <ExplorerPaneContext.Provider value={showAlternateView ? null : dockedBrowser}>{body}</ExplorerPaneContext.Provider>
+      <div className="min-w-0 flex-1 overflow-hidden" style={standaloneAlternate ? { position: "absolute", inset: 0, visibility: "hidden" } : undefined}>
+        <AlternateViewportContext.Provider value={alternateContext}>
+          <ExplorerPaneContext.Provider value={standaloneAlternate ? null : dockedBrowser}>{body}</ExplorerPaneContext.Provider>
+        </AlternateViewportContext.Provider>
       </div>
-      {alternateView && <div className={showAlternateView ? "flex min-h-0 min-w-0 flex-1" : "hidden"}>
-        {showAlternateView && dockedBrowser && <aside data-explorer-sidebar="" aria-label={t("explorer.modelsAndFiles")}
+      {alternateOutlet && alternateView ? createPortal(alternateView, alternateOutlet) : alternateView && <div className={standaloneAlternate ? "flex min-h-0 min-w-0 flex-1" : "hidden"}>
+        {standaloneAlternate && dockedBrowser && <aside data-explorer-sidebar="" aria-label={t("explorer.modelsAndFiles")}
           className="flex w-[216px] shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar">{dockedBrowser}</aside>}
         <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{alternateView}</div>
       </div>}
