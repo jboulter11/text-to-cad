@@ -85,6 +85,12 @@ export default function App({ client, server, tabStore, notice = null, language:
     }
     setToolpathOpen(true);
   }, [toolpathSource]);
+  const closeToolpath = () => {
+    const url = new URL(window.location.href);
+    if (toolpathSource) url.searchParams.set('view', 'model');
+    window.history.replaceState(window.history.state, '', url);
+    setToolpathOpen(false);
+  };
   const links = useMemo(() => ({ ...baseLinks, openToolpath }), [baseLinks, openToolpath]);
   // The document the URL names; anything else is the home (an old link's form included), and the
   // URL says `/`.
@@ -227,16 +233,18 @@ export default function App({ client, server, tabStore, notice = null, language:
     <div className="min-h-0 flex-1" inert={(engineGone && !restarting) || undefined} aria-hidden={(engineGone && !restarting) || undefined}>
     <CadViewer dockExplorer showAlternateView={toolpathOpen}
       activeToolpath={toolpathOpen && toolpathSource && toolpathSource !== localToolpathFor && 'path' in toolpathSource ? toolpathSource.path : undefined}
-      alternateView={<ToolpathView key={file + ':' + (toolpathSource?.name ?? '')} initialSource={toolpathSource} open={toolpathOpen} hasModel={Boolean(file)} t={sayRef.current} onLocalFile={() => setLocalToolpathFor(toolpathSource)} close={() => {
-        const url = new URL(window.location.href);
-        if (toolpathSource) url.searchParams.set('view', 'model');
-        window.history.replaceState(window.history.state, '', url);
-        setToolpathOpen(false);
-      }} />}
+      alternateView={<ToolpathView key={file + ':' + (toolpathSource?.name ?? '')} initialSource={toolpathSource}
+        open={toolpathOpen} t={sayRef.current} onLocalFile={() => setLocalToolpathFor(toolpathSource)}
+        close={file ? undefined : closeToolpath} />}
       openProjectArtifact={(model, toolpath, showToolpath) => {
       void show(model, 'push', toolpath, showToolpath);
     }} client={client} host={host} tabStore={tabStore} live={live} file={file} onShow={next => { void show(next); }} onShown={shown}
-      fullSize={file && !toolpathOpen ? <Button variant="ghost" size="sm" onClick={openToolpath}>G-code</Button> : undefined}
+      fullSize={file ? <div className="flex shrink-0 rounded-md border border-border">
+        <Button variant={toolpathOpen ? 'ghost' : 'secondary'} size="sm" className="rounded-r-none"
+          aria-pressed={!toolpathOpen} onClick={closeToolpath}>{sayRef.current('toolpath.model')}</Button>
+        <Button variant={toolpathOpen ? 'secondary' : 'ghost'} size="sm" className="rounded-l-none"
+          aria-pressed={toolpathOpen} onClick={openToolpath}>G-code</Button>
+      </div> : undefined}
       library={library} onThumbnail={client.keepThumbnail} appSettings={appSettings}
       update={updater.notice || updater.phase.phase !== 'idle' ? <UpdateButton notice={updater.notice} phase={updater.phase} onUpdate={updater.update} /> : null}
       colorScheme={colorScheme} language={language}

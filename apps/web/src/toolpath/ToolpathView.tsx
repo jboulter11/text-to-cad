@@ -14,8 +14,8 @@ export function linkedToolpath(search: string): Source | null {
   return { name: path.split(/[\\/]/).pop() || path, path };
 }
 
-export function ToolpathView({ initialSource, open, hasModel, close, t, onLocalFile }: {
-  initialSource: Source | null; open: boolean; hasModel: boolean; close: () => void; t: Translate; onLocalFile: () => void;
+export function ToolpathView({ initialSource, open, close, t, onLocalFile }: {
+  initialSource: Source | null; open: boolean; close?: () => void; t: Translate; onLocalFile: () => void;
 }) {
   const [source, setSource] = useState(initialSource);
   const [requestedPlate, setRequestedPlate] = useState<string>();
@@ -50,7 +50,7 @@ export function ToolpathView({ initialSource, open, hasModel, close, t, onLocalF
   return <section aria-label={t('menu.toolpath')} className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto bg-canvas p-3 sm:p-4">
     <div className="flex shrink-0 items-center justify-between gap-3">
       <h2 className="min-w-0 truncate text-sm font-medium">{source?.name ?? t('menu.toolpath')}</h2>
-      <Button variant="outline" size="sm" onClick={close}>{t(hasModel ? 'toolpath.model' : 'toolpath.close')}</Button>
+      {close && <Button variant="outline" size="sm" onClick={close}>{t('toolpath.close')}</Button>}
     </div>
     {!source && !result && <p className="text-sm text-muted-foreground">{t('toolpath.formats')}</p>}
     <input ref={picker} type="file" accept=".gcode,.gcode.3mf" hidden onChange={event => {
