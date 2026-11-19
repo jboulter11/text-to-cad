@@ -18,6 +18,7 @@ export default {
   "toolpath.canvas": "押出ツールパス",
   "toolpath.layer": "レイヤー",
   "toolpath.layerHeight": "レイヤー {layer} / {total} · Z {z} mm",
+  "toolpath.filamentColors": "フィラメントの色",
   "toolpath.filaments": "フィラメント",
   "toolpath.filament": "フィラメント {number}",
   "toolpath.open": "ファイルを選択",

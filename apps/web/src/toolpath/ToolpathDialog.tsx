@@ -24,6 +24,7 @@ export function ToolpathDialog({ initialSource, open, hasModel, close, t }: {
   const [selectedLayer, setSelectedLayer] = useState<number>();
   const [view, setView] = useState<{side: 'top' | 'bottom'}>({ side: 'top' });
   const [cumulative, setCumulative] = useState(true);
+  const [colorByFilament, setColorByFilament] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -36,14 +37,14 @@ export function ToolpathDialog({ initialSource, open, hasModel, close, t }: {
   }, [source, requestedPlate]);
 
   const preview = result && !('error' in result) ? result : null;
-  const index = selectedLayer ?? (preview?.layers.length ?? 1) - 1;
+  const index = selectedLayer ?? ((preview?.layers.length ?? 1) - 1);
   const layer = preview?.layers[index];
   const cameraState = useMemo(() => ({ current: null }), [preview]);
-  const layerTools = useMemo(() => preview?.layers.map(layer => {
+  const layerTools = useMemo(() => colorByFilament ? preview?.layers.map(layer => {
     const tools = new Set<number>();
     for (let i = 4; i < layer.paths.length; i += 5) tools.add(layer.paths[i]);
     return tools;
-  }), [preview]);
+  }) : undefined, [preview, colorByFilament]);
   const tools = cumulative ? new Set(layerTools?.slice(0, index + 1).flatMap(tools => [...tools])) : layerTools?.[index];
 
   return <Dialog open={open} onOpenChange={open => { if (!open) close(); }}>
@@ -83,7 +84,7 @@ export function ToolpathDialog({ initialSource, open, hasModel, close, t }: {
           </select>
         </label>}
         <ToolpathViewport layers={preview.layers} bounds={preview.bounds} colors={preview.colors}
-          index={index} cumulative={cumulative} view={view} cameraState={cameraState}
+          index={index} cumulative={cumulative} colorByFilament={colorByFilament} view={view} cameraState={cameraState}
           label={t('toolpath.canvas')} unavailable={t('toolpath.webgl')} />
         <div className="flex items-center gap-3">
           <Slider className="flex-1" defaultValue={undefined} origin={undefined} min={0} max={Math.max(1, preview.layers.length - 1)} value={[index]}
@@ -91,18 +92,20 @@ export function ToolpathDialog({ initialSource, open, hasModel, close, t }: {
             thumbProps={{ 'aria-label': t('toolpath.layer'), 'aria-valuetext': t('toolpath.layerHeight', { layer: index + 1, total: preview.layers.length, z: layer.z.toFixed(2) }) }} />
           <output className="shrink-0 tabular-nums">{t('toolpath.layerHeight', { layer: index + 1, total: preview.layers.length, z: layer.z.toFixed(2) })}</output>
         </div>
-        <div className="flex flex-wrap gap-3" aria-label={t('toolpath.filaments')}>
+        {colorByFilament && <div className="flex flex-wrap gap-3" aria-label={t('toolpath.filaments')}>
           {[...(tools ?? [])].sort((a,b) => a - b).map(tool => <span key={tool} className="flex items-center gap-1.5">
             <span className="size-2.5 rounded-sm border border-current/30" aria-hidden="true" style={{ backgroundColor: toolColor(preview.colors, tool) }} />
             {t('toolpath.filament', { number: tool + 1 })}
           </span>)}
-        </div>
+        </div>}
       </>}
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" onClick={() => picker.current?.click()}>{t('toolpath.open')}</Button>
         {preview && <>
           <Button variant="outline" onClick={() => setView({ side: 'top' })}>{t('toolpath.resetView')}</Button>
           <Button variant="outline" onClick={() => setView({ side: 'bottom' })}>{t('toolpath.underside')}</Button>
+          <Button variant={colorByFilament ? 'default' : 'outline'} aria-pressed={colorByFilament}
+            onClick={() => setColorByFilament(value => !value)}>{t('toolpath.filamentColors')}</Button>
           <Button variant={cumulative ? 'default' : 'outline'} aria-pressed={cumulative}
             onClick={() => setCumulative(value => !value)}>{t('toolpath.earlierLayers')}</Button>
         </>}
