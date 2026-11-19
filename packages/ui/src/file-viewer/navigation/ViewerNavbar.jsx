@@ -182,7 +182,8 @@ function FileMenu({ platform, capabilities, sourceMissing = false, apps = null, 
 export function NameMenu({ path, kind, explorer, recent, onPick, sortable = false, projects = /** @type {import("react").ReactNode} */ (null) }) {
   const { t } = useI18n();
   const usage = useControlUsage();
-  const [tab, setTab] = useState(() => firstTab(kind, explorer, recent));
+  const [selectedTab, setTab] = useState(/** @type {string | null} */ (null));
+  const tab = selectedTab ?? (projects ? "projects" : firstTab(kind, explorer, recent));
   // The tab on screen as last chosen: a press and the focus it brings both ask for the same tab.
   const shownTab = useRef(tab);
   const files = explorer ? <FolderExplorer sortable={sortable} source={explorer.source} file={path} folder={explorer.folder} onFolderChange={explorer.onFolderChange}
@@ -192,9 +193,10 @@ export function NameMenu({ path, kind, explorer, recent, onPick, sortable = fals
   // A tab a person turns to is a use of it, as the one the menu opens on is (`FileName`).
   return <Tabs value={tab} onValueChange={next => { if (next !== shownTab.current && TAB_CONTROLS[next]) usage.used(TAB_CONTROLS[next]); shownTab.current = next; setTab(next); }} className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden" data-name-menu="">
     <TabsList className="mx-2 mt-2 h-7 w-fit shrink-0 self-start">
-      {models && <TabsTrigger value="models">{t("explorer.models")}</TabsTrigger>}
-      {files && <TabsTrigger value="files">{t("explorer.files")}</TabsTrigger>}
       {projects && <TabsTrigger value="projects">{t("explorer.projects")}</TabsTrigger>}
+      {!projects && models && <TabsTrigger value="models">{t("explorer.models")}</TabsTrigger>}
+      {files && <TabsTrigger value="files">{t("explorer.files")}</TabsTrigger>}
+      {projects && models && <TabsTrigger value="models">{t("explorer.models")}</TabsTrigger>}
     </TabsList>
     <TabsContent value="models" className="flex min-h-0 flex-1 flex-col">{models}</TabsContent>
     <TabsContent value="files" className="flex min-h-0 flex-1 flex-col">{files}</TabsContent>
