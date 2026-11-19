@@ -18,10 +18,10 @@ export function readDefaultFileParam() {
 
 /**
  * Name the document `id` in the URL (`""` or null is none: the home, `/`), as a new history entry or
- * in place of this one. The query the page carries is kept.
+ * in place of this one. By default the query the page carries is kept.
  */
-export function writeDocumentId(id, { history = "push" } = {}) {
-  const rest = new URLSearchParams(window.location.search).toString();
+export function writeDocumentId(id, { history = "push", params = new URLSearchParams(window.location.search) } = {}) {
+  const rest = params.toString();
   const next = `/${id || ""}${rest ? `?${rest}` : ""}${window.location.hash}`;
   if (next === `${window.location.pathname}${window.location.search}${window.location.hash}`) return;
   if (history === "push") window.history.pushState({}, "", next);

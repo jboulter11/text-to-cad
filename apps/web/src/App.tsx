@@ -74,7 +74,7 @@ export default function App({ client, server, tabStore, notice = null, language:
   // The view on screen, for the library's pictures of what was opened.
   const live = useMemo(() => createLiveRegistry(), []);
   const baseLinks = useViewerLinks();
-  const [toolpathSource] = useState(() => linkedToolpath(window.location.search));
+  const [toolpathSource, setToolpathSource] = useState(() => linkedToolpath(window.location.search));
   const [toolpathOpen, setToolpathOpen] = useState(() => Boolean(toolpathSource) && new URLSearchParams(window.location.search).get('view') !== 'model');
   const openToolpath = useCallback(() => {
     if (toolpathSource) {
@@ -103,7 +103,14 @@ export default function App({ client, server, tabStore, notice = null, language:
       if (!id) { setFile(wanted); return; }  // a file that is not there says so, by its path
     }
     if (id === shownFile.current) return;
-    writeDocumentId(id, { history });
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('toolpath')) {
+      params.delete('toolpath');
+      params.delete('view');
+    }
+    writeDocumentId(id, { history, params });
+    setToolpathSource(null);
+    setToolpathOpen(false);
     setFile(id);
   }, [client]);
   useEffect(() => {
@@ -112,7 +119,13 @@ export default function App({ client, server, tabStore, notice = null, language:
       const fallback = readDefaultFileParam();  // a developer's build's default file
       if (fallback) void show(fallback, 'replace');
     }
-    const sync = () => { asked.current += 1; setFile(readDocumentId() || ''); };
+    const sync = () => {
+      asked.current += 1;
+      const source = linkedToolpath(window.location.search);
+      setToolpathSource(source);
+      setToolpathOpen(Boolean(source) && new URLSearchParams(window.location.search).get('view') !== 'model');
+      setFile(readDocumentId() || '');
+    };
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
   }, []);
@@ -213,7 +226,7 @@ export default function App({ client, server, tabStore, notice = null, language:
       update={updater.notice || updater.phase.phase !== 'idle' ? <UpdateButton notice={updater.notice} phase={updater.phase} onUpdate={updater.update} /> : null}
       colorScheme={colorScheme} language={language}
       whatsNew={engineGone || restarting ? undefined : { entry: whatsNew.entry, onDismiss: whatsNew.dismiss }} />
-    <ToolpathDialog initialSource={toolpathSource} open={toolpathOpen} hasModel={Boolean(file)} t={sayRef.current} close={() => {
+    <ToolpathDialog key={file} initialSource={toolpathSource} open={toolpathOpen} hasModel={Boolean(file)} t={sayRef.current} close={() => {
       const url = new URL(window.location.href);
       if (toolpathSource) url.searchParams.set('view', 'model');
       window.history.replaceState(window.history.state, '', url);
