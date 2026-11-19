@@ -47,7 +47,7 @@ function sendPlate(plate, text, colors, plates = ['1'], lineWidth = 0.42) {
 }
 
 async function fetchArchive(path) {
-  const params = new URLSearchParams({ path });
+  const params = new URLSearchParams({ path, toolpath: '1' });
   const response = await fetch('/api/v1/local/files?' + params);
   if (!response.ok) throw new Error('readError');
   if (Number(response.headers.get('content-length')) > byteLimit) throw new Error('tooLarge');

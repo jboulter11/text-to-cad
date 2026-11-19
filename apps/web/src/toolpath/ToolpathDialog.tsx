@@ -11,7 +11,7 @@ type Translate = (key: string, params?: Record<string, unknown>) => string;
 
 export function linkedToolpath(search: string): Source | null {
   const path = new URLSearchParams(search).get('toolpath');
-  if (!path || !/^(?:\/|[a-z]:[\\/]).*\.gcode\.3mf$/i.test(path)) return null;
+  if (!path || !/^(?:\/|[a-z]:[\\/]).*\.gcode(?:\.3mf)?$/i.test(path)) return null;
   return { name: path.split(/[\\/]/).pop() || path, path };
 }
 

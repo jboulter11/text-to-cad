@@ -93,7 +93,7 @@ export default function App({ client, server, tabStore, notice = null, language:
   const asked = useRef(0);
   /** Show a document by its id, a file by its absolute path (asked for its id), or the home (''): a
    * new step in the browser's history, or this one's place (`history: 'replace'`). */
-  const show = useCallback(async (next: string, history: 'push' | 'replace' = 'push') => {
+  const show = useCallback(async (next: string, history: 'push' | 'replace' = 'push', toolpath?: string, showToolpath = false) => {
     const turn = ++asked.current;
     const wanted = normalizePath(next);
     let id = !wanted || DOCUMENT_ID.test(wanted) ? wanted : '';
@@ -102,15 +102,19 @@ export default function App({ client, server, tabStore, notice = null, language:
       if (turn !== asked.current) return;
       if (!id) { setFile(wanted); return; }  // a file that is not there says so, by its path
     }
-    if (id === shownFile.current) return;
+    if (id === shownFile.current && !toolpath && !new URLSearchParams(window.location.search).has('toolpath')) return;
     const params = new URLSearchParams(window.location.search);
     if (params.has('toolpath')) {
       params.delete('toolpath');
       params.delete('view');
     }
+    if (toolpath) {
+      params.set('toolpath', toolpath);
+      if (!showToolpath) params.set('view', 'model');
+    }
     writeDocumentId(id, { history, params });
-    setToolpathSource(null);
-    setToolpathOpen(false);
+    setToolpathSource(linkedToolpath(params.toString()));
+    setToolpathOpen(Boolean(toolpath) && showToolpath);
     setFile(id);
   }, [client]);
   useEffect(() => {
@@ -220,13 +224,15 @@ export default function App({ client, server, tabStore, notice = null, language:
     {/* The engine gone, its notice is the page's one: what is under it (a view's own "can't reach"
         card among it) is out of reach and unheard until it is back. An update's restart says nothing. */}
     <div className="min-h-0 flex-1" inert={(engineGone && !restarting) || undefined} aria-hidden={(engineGone && !restarting) || undefined}>
-    <CadViewer dockExplorer client={client} host={host} tabStore={tabStore} live={live} file={file} onShow={next => { void show(next); }} onShown={shown}
+    <CadViewer dockExplorer openProjectArtifact={(model, toolpath, showToolpath) => {
+      void show(model, 'push', toolpath, showToolpath);
+    }} client={client} host={host} tabStore={tabStore} live={live} file={file} onShow={next => { void show(next); }} onShown={shown}
       fullSize={file ? <Button variant="ghost" size="sm" onClick={openToolpath}>G-code</Button> : undefined}
       library={library} onThumbnail={client.keepThumbnail} appSettings={appSettings}
       update={updater.notice || updater.phase.phase !== 'idle' ? <UpdateButton notice={updater.notice} phase={updater.phase} onUpdate={updater.update} /> : null}
       colorScheme={colorScheme} language={language}
       whatsNew={engineGone || restarting ? undefined : { entry: whatsNew.entry, onDismiss: whatsNew.dismiss }} />
-    <ToolpathDialog key={file} initialSource={toolpathSource} open={toolpathOpen} hasModel={Boolean(file)} t={sayRef.current} close={() => {
+    <ToolpathDialog key={file + ':' + (toolpathSource?.name ?? '')} initialSource={toolpathSource} open={toolpathOpen} hasModel={Boolean(file)} t={sayRef.current} close={() => {
       const url = new URL(window.location.href);
       if (toolpathSource) url.searchParams.set('view', 'model');
       window.history.replaceState(window.history.state, '', url);

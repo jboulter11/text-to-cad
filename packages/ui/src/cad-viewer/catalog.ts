@@ -64,8 +64,8 @@ export function createCadFileSource(client: Pick<CadWorkspaceService, 'resolveEn
         extension: byId ? 'xbf' : name.split('.').pop()?.toLowerCase() || '', mediaType: byId ? 'cad-document' : 'cad',
         revision: contentRevision(entry) };
     },
-    async list(directory, { signal }) {
-      const folder = await client.folder(directory, { signal });
+    async list(directory, { signal, toolpaths }) {
+      const folder = await client.folder(directory, { signal, ...(toolpaths ? { toolpaths } : {}) });
       return folder.entries.map(entry => {
         const path = joinPath(folder.path, entry.name);
         const modified = folder.modified?.[path];

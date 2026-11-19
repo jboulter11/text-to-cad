@@ -41,6 +41,7 @@ export interface RecentDocument {
   opened?: number | null;
   updated?: number | null;
   missing?: boolean;
+  script?: string | null;
 }
 /**
  * One app Open in offers for a file: its id (what `openApp` names) and its name, as drawn (a KiCad's says its
@@ -80,7 +81,7 @@ export interface FileSource {
   /** Stable identity: what a document's key is named by. */
   id: string;
   stat: (path: string, options: { signal: AbortSignal }) => Promise<FileMetadata>;
-  list?: (directory: string, options: { signal: AbortSignal }) => Promise<readonly FileEntry[]>;
+  list?: (directory: string, options: { signal: AbortSignal; toolpaths?: boolean }) => Promise<readonly FileEntry[]>;
   search?: (directory: string, query: string, options: { signal: AbortSignal }) => Promise<{ paths: readonly string[]; truncated: boolean; modified?: Readonly<Record<string, number>> }>;
 }
 export interface FileViewerState {
@@ -236,6 +237,8 @@ export interface FileViewerProps {
   explorerFolder?: string | null;
   /** Dock the document browser above the model inspector on desktop. */
   dockExplorer?: boolean;
+  projectsRoot?: string | null;
+  openProjectArtifact?(model: string, toolpath?: string, showToolpath?: boolean): void;
   /** The folder the explorer is in, each time it changes: the host keeps it for `explorerFolder`. */
   onExplorerFolderChange?(folder: string): void;
   /** The host's notice, shown at the viewport's top-right once the file is on screen (`RendererViewProps.notice`). */

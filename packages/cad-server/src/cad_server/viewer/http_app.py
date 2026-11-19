@@ -1260,7 +1260,7 @@ class CadApp:
 
         path = query.get("path")
         try:
-            answer = search_folder(path, query.get("q")) if query.get("q") is not None else list_folder(path)
+            answer = search_folder(path, query.get("q")) if query.get("q") is not None else list_folder(path, toolpaths=query.get("toolpaths") == "1")
             paths = answer.get("results")
             if paths is None:
                 paths = [to_posix_path(os.path.join(answer["path"], entry["name"])) for entry in answer["entries"]]
@@ -1460,6 +1460,12 @@ class CadApp:
         and a bare "Not found" left nothing to fix."""
         ref = query.get("path") or ""
         candidate = asset_path(ref)
+        if not candidate and query.get("toolpath") == "1":
+            from .folders import _plain_toolpath
+
+            path = absolute_path(ref)
+            if _plain_toolpath(os.path.basename(path)):
+                candidate = path
         if not candidate:
             raise ApiError(404, f"{ref} is not a file the viewer sends: it sends CAD files "
                                 f"({_CAD_EXTENSIONS}) whose names are not hidden", "name a CAD file by its absolute path")
