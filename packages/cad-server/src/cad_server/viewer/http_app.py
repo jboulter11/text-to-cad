@@ -351,8 +351,8 @@ class CadApp:
             "platform": sys.platform if sys.platform in ("darwin", "win32") else "linux",
             # The OS identity of the engine serving this page.
             "user": os_user(),
-            # The person's home folder: where the explorer starts with nowhere else to start.
-            "home": to_posix_path(os.path.expanduser("~")),
+            # Where the Files explorer starts when it has no current folder.
+            "home": to_posix_path(os.environ.get("CAD_VIEWER_FILES_HOME") or os.path.expanduser("~")),
             # The folder of the most recent launch, its relative files' folder. Not a boundary.
             "start": self.start,
             "pick": self.pick,
