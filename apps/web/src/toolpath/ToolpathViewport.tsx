@@ -77,7 +77,8 @@ export function ToolpathViewport({ layers, bounds, colors, index, cumulative, vi
     scene.add(new LineSegments(geometry, material));
     const draw = () => renderer.render(scene, camera);
     const resize = () => {
-      const { width, height } = surface.getBoundingClientRect();
+      const width = surface.clientWidth;
+      const height = surface.clientHeight;
       if (!width || !height) return;
       const halfY = span / 2 * Math.max(1, height / width);
       const halfX = halfY * width / height;
