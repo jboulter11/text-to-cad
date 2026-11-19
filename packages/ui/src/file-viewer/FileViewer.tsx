@@ -29,7 +29,7 @@ class RenderBoundary extends Component<{ children: ReactNode; title: string; onE
  * The complete file view: one file, by its absolute path, under the one navbar. Its only knowledge
  * of formats comes from registrations. With no file it shows the host's home.
  */
-export function FileViewer({ file, host, renderers, state, onStateChange, colorScheme, language, appSettings, update, history, recent, explorerFolder = null, dockExplorer = false, projectsRoot, openProjectArtifact, onExplorerFolderChange, notice, navbarActions, fileMenuItems, overlay, onError, presentation, chrome = "page" }: FileViewerProps) {
+export function FileViewer({ file, host, renderers, state, onStateChange, colorScheme, language, appSettings, update, history, recent, explorerFolder = null, dockExplorer = false, activeToolpath, alternateView, showAlternateView = false, projectsRoot, openProjectArtifact, onExplorerFolderChange, notice, navbarActions, fileMenuItems, overlay, onError, presentation, chrome = "page" }: FileViewerProps) {
   // The language the host names (`environment.locale`): this frame's own strings, and everything
   // drawn under it (`I18nProvider`), the nodes the host hands it included.
   const locale = host.environment.locale;
@@ -170,14 +170,14 @@ export function FileViewer({ file, host, renderers, state, onStateChange, colorS
       return next;
     });
   }, []);
-  const projects = openProjectArtifact && projectsRoot && source.list ? <ProjectsList root={projectsRoot}
+  const projects = openProjectArtifact && projectsRoot && source.list ? <ProjectsList root={projectsRoot} activePath={activeToolpath ?? navigationPath ?? path ?? ""}
     list={source.list} recent={recent} onOpen={(model, toolpath, showToolpath) => {
       setBrowserTab("projects");
       openProjectArtifact(model, toolpath, showToolpath);
     }}
     expanded={expandedProjects} onExpandedChange={setProjectExpanded} /> : null;
-  const dockedBrowser = dockExplorer && !mobile && path && (explorer || recentMenu)
-    ? <NameMenu path={navigationPath ?? path} kind={model ? "model" : "file"} explorer={explorer} recent={recentMenu}
+  const dockedBrowser = dockExplorer && !mobile && (path || activeToolpath) && (explorer || recentMenu)
+    ? <NameMenu path={navigationPath ?? path ?? ""} kind={model ? "model" : "file"} explorer={explorer} recent={recentMenu}
       onPick={(open: (next: string) => void, next: string) => open(next)} sortable projects={projects} activeTab={browserTab} onTabChange={setBrowserTab} />
     : null;
   // The logo's app menu: the host's links and the person's settings (Back to home is `onHome`).
@@ -195,7 +195,14 @@ export function FileViewer({ file, host, renderers, state, onStateChange, colorS
       ? <ViewerNavbar onHome={host.navigation.home} menu={menu} history={history} file={navigationPath ?? path} name={shown?.file.name} sortable={dockExplorer} projects={mobile ? projects : null} kind={model ? "model" : "file"} explorer={explorer} recent={recentMenu} fileMenu={fileMenu} trailing={trailing} actions={navbarActions} update={update} />
       : <ViewerNavbar menu={menu} history={history} actions={navbarActions} update={update} />) : null}
     <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
-      <div className="min-w-0 flex-1 overflow-hidden"><ExplorerPaneContext.Provider value={dockedBrowser}>{body}</ExplorerPaneContext.Provider></div>
+      <div className="min-w-0 flex-1 overflow-hidden" style={showAlternateView ? { display: "none" } : undefined}>
+        <ExplorerPaneContext.Provider value={showAlternateView ? null : dockedBrowser}>{body}</ExplorerPaneContext.Provider>
+      </div>
+      {alternateView && <div className={showAlternateView ? "flex min-h-0 min-w-0 flex-1" : "hidden"}>
+        {showAlternateView && dockedBrowser && <aside data-explorer-sidebar="" aria-label={t("explorer.modelsAndFiles")}
+          className="flex w-[216px] shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar">{dockedBrowser}</aside>}
+        <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{alternateView}</div>
+      </div>}
       {overlay}
     </div>
   </div></ViewerElementContext.Provider></ViewerHostContext.Provider></ViewerMobileContext.Provider></I18nProvider>;

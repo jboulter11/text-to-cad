@@ -19,7 +19,7 @@ import { createWebPromptContext } from './host/promptContext';
 import { useViewerLinks } from './host/viewerLinks.js';
 import { EngineStopped } from './EngineStopped';
 import { Button } from '@cad/ui/primitives/button';
-import { linkedToolpath, ToolpathDialog } from './toolpath/ToolpathDialog';
+import { linkedToolpath, ToolpathView } from './toolpath/ToolpathView';
 import { readDefaultFileParam, readDocumentId, writeDocumentId } from './client/workbench/fileParam.js';
 import { applyColorSchemeToDocument, resolveColorSchemeMode } from './client/ui/colorScheme.js';
 
@@ -75,6 +75,7 @@ export default function App({ client, server, tabStore, notice = null, language:
   const live = useMemo(() => createLiveRegistry(), []);
   const baseLinks = useViewerLinks();
   const [toolpathSource, setToolpathSource] = useState(() => linkedToolpath(window.location.search));
+  const [localToolpathFor, setLocalToolpathFor] = useState<typeof toolpathSource>(null);
   const [toolpathOpen, setToolpathOpen] = useState(() => Boolean(toolpathSource) && new URLSearchParams(window.location.search).get('view') !== 'model');
   const openToolpath = useCallback(() => {
     if (toolpathSource) {
@@ -224,19 +225,22 @@ export default function App({ client, server, tabStore, notice = null, language:
     {/* The engine gone, its notice is the page's one: what is under it (a view's own "can't reach"
         card among it) is out of reach and unheard until it is back. An update's restart says nothing. */}
     <div className="min-h-0 flex-1" inert={(engineGone && !restarting) || undefined} aria-hidden={(engineGone && !restarting) || undefined}>
-    <CadViewer dockExplorer openProjectArtifact={(model, toolpath, showToolpath) => {
+    <CadViewer dockExplorer showAlternateView={toolpathOpen}
+      activeToolpath={toolpathOpen && toolpathSource && toolpathSource !== localToolpathFor && 'path' in toolpathSource ? toolpathSource.path : undefined}
+      alternateView={<ToolpathView key={file + ':' + (toolpathSource?.name ?? '')} initialSource={toolpathSource} open={toolpathOpen} hasModel={Boolean(file)} t={sayRef.current} onLocalFile={() => setLocalToolpathFor(toolpathSource)} close={() => {
+        const url = new URL(window.location.href);
+        if (toolpathSource) url.searchParams.set('view', 'model');
+        window.history.replaceState(window.history.state, '', url);
+        setToolpathOpen(false);
+      }} />}
+      openProjectArtifact={(model, toolpath, showToolpath) => {
       void show(model, 'push', toolpath, showToolpath);
     }} client={client} host={host} tabStore={tabStore} live={live} file={file} onShow={next => { void show(next); }} onShown={shown}
-      fullSize={file ? <Button variant="ghost" size="sm" onClick={openToolpath}>G-code</Button> : undefined}
+      fullSize={file && !toolpathOpen ? <Button variant="ghost" size="sm" onClick={openToolpath}>G-code</Button> : undefined}
       library={library} onThumbnail={client.keepThumbnail} appSettings={appSettings}
       update={updater.notice || updater.phase.phase !== 'idle' ? <UpdateButton notice={updater.notice} phase={updater.phase} onUpdate={updater.update} /> : null}
       colorScheme={colorScheme} language={language}
       whatsNew={engineGone || restarting ? undefined : { entry: whatsNew.entry, onDismiss: whatsNew.dismiss }} />
-    <ToolpathDialog key={file + ':' + (toolpathSource?.name ?? '')} initialSource={toolpathSource} open={toolpathOpen} hasModel={Boolean(file)} t={sayRef.current} close={() => {
-      const url = new URL(window.location.href);
-      if (toolpathSource) url.searchParams.set('view', 'model');
-      window.history.replaceState(window.history.state, '', url);
-      setToolpathOpen(false);
-    }} />
+
   </div></div>;
 }

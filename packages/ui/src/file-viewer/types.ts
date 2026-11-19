@@ -237,6 +237,9 @@ export interface FileViewerProps {
   explorerFolder?: string | null;
   /** Dock the document browser above the model inspector on desktop. */
   dockExplorer?: boolean;
+  activeToolpath?: string;
+  alternateView?: ReactNode;
+  showAlternateView?: boolean;
   projectsRoot?: string | null;
   openProjectArtifact?(model: string, toolpath?: string, showToolpath?: boolean): void;
   /** The folder the explorer is in, each time it changes: the host keeps it for `explorerFolder`. */

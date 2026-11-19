@@ -12,7 +12,7 @@ type Project = { name: string; modified?: number; printed?: FileEntry; models: R
 const isSlice = (name: string) => /\.gcode(?:\.3mf)?$/i.test(name);
 const isModel = (name: string) => !isSlice(name) && /\.(?:3mf|stl|step|stp|xbf|glb|obj)$/i.test(name);
 const groupStyle = "group flex w-full cursor-pointer list-none items-center gap-1.5 rounded-sm px-2 py-1 text-left text-xs hover:bg-sidebar-accent [&::-webkit-details-marker]:hidden";
-const entryStyle = "flex w-full items-center truncate rounded-sm px-2 py-1 text-left text-xs hover:bg-sidebar-accent";
+const entryStyle = "flex w-full items-center truncate rounded-sm px-2 py-1 text-left text-xs hover:bg-sidebar-accent aria-[current=true]:bg-accent aria-[current=true]:text-accent-foreground";
 
 function useEntries(list: Listing, path?: string) {
   const [state, setState] = useState<{ path: string; entries?: readonly FileEntry[] }>({ path: "" });
@@ -29,7 +29,7 @@ function useEntries(list: Listing, path?: string) {
   return state.path === path ? state.entries ?? null : undefined;
 }
 
-function Artifacts({ entries, onOpen }: { entries: readonly FileEntry[]; onOpen: Open }) {
+function Artifacts({ entries, onOpen, activePath }: { entries: readonly FileEntry[]; onOpen: Open; activePath: string }) {
   const models = entries.filter(entry => isModel(entry.name));
   const slices = entries.filter(entry => isSlice(entry.name));
   const modelFor = (slice: FileEntry) => {
@@ -38,29 +38,29 @@ function Artifacts({ entries, onOpen }: { entries: readonly FileEntry[]; onOpen:
     return exact ?? (models.length === 1 ? models[0] : undefined);
   };
   return <>
-    {models.map(model => <button key={model.path} className={entryStyle} title={model.name}
+    {models.map(model => <button key={model.path} className={entryStyle} title={model.name} aria-current={model.path === activePath || undefined}
       onClick={() => onOpen(model.path, slices.find(slice => modelFor(slice) === model)?.path)}>{model.name}</button>)}
-    {slices.map(slice => <button key={slice.path} className={entryStyle} title={slice.name}
+    {slices.map(slice => <button key={slice.path} className={entryStyle} title={slice.name} aria-current={slice.path === activePath || undefined}
       onClick={() => onOpen(modelFor(slice)?.path ?? "", slice.path, true)}>{slice.name}</button>)}
   </>;
 }
 
-function Version({ name, path, files, list, onOpen, open, setOpen }: {
-  name: string; path?: string; files?: FileEntry[]; list: Listing; onOpen: Open; open: boolean; setOpen(open: boolean): void;
+function Version({ name, path, files, list, onOpen, open, setOpen, activePath }: {
+  name: string; path?: string; files?: FileEntry[]; list: Listing; onOpen: Open; activePath: string; open: boolean; setOpen(open: boolean): void;
 }) {
   const { t } = useI18n();
   const entries = useEntries(list, open ? path : undefined);
   return <details open={open} onToggle={event => setOpen(event.currentTarget.open)}>
     <summary className={groupStyle}><ChevronRight className="size-3 shrink-0 group-open:rotate-90" />{name}</summary>
     {open && <div className="pl-3">
-      {files || entries ? <Artifacts entries={files ?? entries ?? []} onOpen={onOpen} />
+      {files || entries ? <Artifacts entries={files ?? entries ?? []} onOpen={onOpen} activePath={activePath} />
         : <p className="m-2 text-xs text-muted-foreground">{t(entries === null ? "explorer.readFailed" : "explorer.loading")}</p>}
     </div>}
   </details>;
 }
 
-function ProjectRow({ project, list, onOpen, sort, expanded, onExpandedChange }: {
-  project: Project; list: Listing; onOpen: Open; sort: string;
+function ProjectRow({ project, list, onOpen, sort, expanded, onExpandedChange, activePath }: {
+  project: Project; list: Listing; onOpen: Open; sort: string; activePath: string;
 } & Expansion) {
   const { t, locale } = useI18n();
   const open = expanded.has(project.name);
@@ -86,7 +86,7 @@ function ProjectRow({ project, list, onOpen, sort, expanded, onExpandedChange }:
   }
   const groups = [...versions].map(([name, version]) => ({
     name, modified: version.modified,
-    node: <Version key={name} name={name} list={list} onOpen={onOpen} {...version}
+    node: <Version key={name} name={name} list={list} onOpen={onOpen} activePath={activePath} {...version}
       open={expanded.has(`${project.name}/${name}`)} setOpen={value => onExpandedChange(`${project.name}/${name}`, value)} />,
   }));
   if (project.models.length) {
@@ -98,7 +98,7 @@ function ProjectRow({ project, list, onOpen, sort, expanded, onExpandedChange }:
         onToggle={event => onExpandedChange(`${project.name}/working`, event.currentTarget.open)}>
         <summary className={groupStyle}><ChevronRight className="size-3 shrink-0" />{working}</summary>
         <div className="pl-3">
-          {project.models.map(model => <button key={model.path} className={entryStyle}
+          {project.models.map(model => <button key={model.path} className={entryStyle} aria-current={model.path === activePath || undefined}
             onClick={() => onOpen(model.path)}>{model.name}</button>)}
         </div>
       </details>,
@@ -112,17 +112,18 @@ function ProjectRow({ project, list, onOpen, sort, expanded, onExpandedChange }:
     </summary>
     {open && <div className="pl-3">
       {groups.map(group => group.node)}
-      <Artifacts entries={loose} onOpen={onOpen} />
+      <Artifacts entries={loose} onOpen={onOpen} activePath={activePath} />
       {project.printed && !entries && <p className="m-2 text-xs text-muted-foreground">{t(entries === null ? "explorer.readFailed" : "explorer.loading")}</p>}
     </div>}
   </details>;
 }
 
-export function ProjectsList({ root, list, recent, onOpen, expanded, onExpandedChange }: {
+export function ProjectsList({ root, list, recent, onOpen, expanded, onExpandedChange, activePath }: {
   root: string;
   list: Listing;
   recent?: { list(): Promise<readonly RecentDocument[]> };
   onOpen: Open;
+  activePath: string;
 } & Expansion) {
   const { t, locale } = useI18n();
   const [sort, setSort] = useState("modified");
@@ -157,7 +158,7 @@ export function ProjectsList({ root, list, recent, onOpen, expanded, onExpandedC
       onChange={setQuery} onKeyDown={undefined} inputRef={undefined} trailing={undefined} clearLabel={undefined} className={undefined} />
     <div className="min-h-0 flex-1 overflow-y-auto p-1">
       {rows.map(project => <ProjectRow key={project.name} project={project} sort={sort} list={list} onOpen={onOpen}
-        expanded={expanded} onExpandedChange={onExpandedChange} />)}
+        expanded={expanded} onExpandedChange={onExpandedChange} activePath={activePath} />)}
       {!rows.length && <p className="m-2 text-xs text-muted-foreground">{t(printed === undefined ? "explorer.loading" : "explorer.noMatches")}</p>}
     </div>
   </div>;

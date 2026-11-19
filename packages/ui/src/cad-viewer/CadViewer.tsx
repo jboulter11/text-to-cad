@@ -95,6 +95,9 @@ export interface CadViewerProps<Model extends LibraryModel = LibraryModel> {
    */
   fullSize?: ReactNode;
   dockExplorer?: boolean;
+  activeToolpath?: string;
+  alternateView?: ReactNode;
+  showAlternateView?: boolean;
   openProjectArtifact?(model: string, toolpath?: string, showToolpath?: boolean): void;
   /** The chrome around the view (`FileViewerProps.chrome`): the navbar (`"page"`, the default), or the view alone (`"bare"`). */
   chrome?: "page" | "bare";
@@ -120,7 +123,7 @@ const reportError = (error: Error) => console.error(error);
  * navigates: showing a file, or the home, is the host's `onShow`.
  */
 export function CadViewer<Model extends LibraryModel = LibraryModel>({ client, host, tabStore, live, file, onShow, onShown,
-  library, onThumbnail, colorScheme, language, appSettings, notice, update, fullSize, dockExplorer, openProjectArtifact, history, chrome, whatsNew, onError = reportError }: CadViewerProps<Model>) {
+  library, onThumbnail, colorScheme, language, appSettings, notice, update, fullSize, dockExplorer, activeToolpath, alternateView, showAlternateView, openProjectArtifact, history, chrome, whatsNew, onError = reportError }: CadViewerProps<Model>) {
   // The language the host names: the pages drawn here (the home, a file that will not open) read in it.
   const locale = host.environment.locale;
   const t = translator(locale);
@@ -258,7 +261,7 @@ export function CadViewer<Model extends LibraryModel = LibraryModel>({ client, h
   return <I18nProvider locale={locale}>
     <ControlUsageProvider report={host.usage?.controls}>
     <ExportControls service={client.exports} downloads={host.downloads} file={shown ?? path}>{({ menu, overlay }) => <FileViewer navbarActions={fullSize} fileMenuItems={menu} overlay={overlay} file={path || null} host={viewerHost} renderers={renderers} state={state} onStateChange={onStateChange}
-      colorScheme={colorScheme} language={language} appSettings={appSettings} update={update} history={history} recent={recent} dockExplorer={dockExplorer} projectsRoot={homeFolder} openProjectArtifact={openProjectArtifact} explorerFolder={explorerFolder} onExplorerFolderChange={homed ? keepExplorerFolder : undefined} notice={notice} chrome={chrome} onError={onError} presentation={presentation} />}</ExportControls>
+      colorScheme={colorScheme} language={language} appSettings={appSettings} update={update} history={history} recent={recent} dockExplorer={dockExplorer} activeToolpath={activeToolpath} alternateView={alternateView} showAlternateView={showAlternateView} projectsRoot={homeFolder} openProjectArtifact={openProjectArtifact} explorerFolder={explorerFolder} onExplorerFolderChange={homed ? keepExplorerFolder : undefined} notice={notice} chrome={chrome} onError={onError} presentation={presentation} />}</ExportControls>
     </ControlUsageProvider>
     {whatsNew && onScreen ? <WhatsNewDialog entry={whatsNew.entry} onDismiss={whatsNew.onDismiss} /> : null}
     {drawing && !path ? <OffscreenPicture key={drawing.source.file} source={drawing.source} host={host} preferences={preferences} onDone={drawn} /> : null}

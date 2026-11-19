@@ -165,5 +165,5 @@ export function ToolpathViewport({ layers, bounds, colors, index, cumulative, co
   }, [view, bounds]);
 
   return failed ? <p role="alert">{unavailable}</p> :
-    <canvas ref={canvas} className="h-[min(67svh,44rem)] w-full touch-none rounded-md border" aria-label={label} />;
+    <canvas ref={canvas} className="min-h-40 w-full flex-1 touch-none rounded-md border" aria-label={label} />;
 }
