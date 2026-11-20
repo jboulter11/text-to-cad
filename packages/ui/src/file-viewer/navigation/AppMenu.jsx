@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Info, MessageCircle, Monitor, Moon, Sun } from "lucide-react";
+import { ArrowLeft, Check, Info, Layers, MessageCircle, Monitor, Moon, Sun } from "lucide-react";
 import { Fragment, useState } from "react";
 
 import { DropdownMenu as MenuPrimitive } from "radix-ui";
@@ -67,6 +67,9 @@ export function AppMenu({ trigger, onHome, links, appSettings = NONE, colorSchem
   ].filter(Boolean);
   const groups = [
     onHome ? [<DropdownMenuItem key="home" onSelect={onHome} data-menu-home=""><ArrowLeft aria-hidden="true" />{t("menu.backToHome")}</DropdownMenuItem>] : [],
+    links?.openToolpath ? [<DropdownMenuItem key="toolpath" onSelect={links.openToolpath}>
+      <Layers aria-hidden="true" />{t("menu.toolpath")}
+    </DropdownMenuItem>] : [],
     // The person's settings, one group of like rows — Language, the host's on/off settings, Theme: a name
     // on the left in the menu's own text and its control on the right — the language in force, a checkbox
     // filled while on, Theme's segmented System, Light and Dark. A press keeps the menu open.

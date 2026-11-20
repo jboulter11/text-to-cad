@@ -7,8 +7,10 @@ from __future__ import annotations
 
 import sys
 import threading
+import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from tests.python.support.paths import add_sources
 
@@ -38,6 +40,7 @@ class FakePool:
 
 class PoolRecoveryTest(unittest.TestCase):
     def setUp(self):
+        self.enterContext(patch('cad.engine.places.KERNEL', None))
         FakePool.instances = []
         self._real = serve.concurrent.futures.ProcessPoolExecutor
         serve.concurrent.futures.ProcessPoolExecutor = FakePool
@@ -68,12 +71,35 @@ class PoolRecoveryTest(unittest.TestCase):
         self.assertIsNot(rebuilt, first)
         self.assertTrue(first.shut)
 
+    def test_idle_pool_is_replaced_on_demand_and_running_jobs_keep_it_alive(self):
+        server = serve.Server()
+        self.addCleanup(server.stop)
+        reader = server._readers()
+        mesh = server.mesher.processes(warm=False)
+        past = time.monotonic() - 301
+        server.reader_used = server.mesher._used = past
+        server.reading["all"] = 1
+        server.mesher._running = 1
+
+        server.retire_idle_workers(300)
+        self.assertFalse(reader.shut)
+        self.assertFalse(mesh.shut)
+
+        server.reading["all"] = 0
+        server.mesher._running = 0
+        server.retire_idle_workers(300)
+        self.assertTrue(reader.shut)
+        self.assertTrue(mesh.shut)
+        self.assertIsNot(server._readers(), reader)
+        self.assertIsNot(server.mesher.processes(warm=False), mesh)
+
 
 class ReaderLanesTest(unittest.TestCase):
     """A board's part models come at once: small files are read beside the one reader, by helpers
     that go once no read is under way; a large file, or any under memory pressure, waits for it."""
 
     def setUp(self):
+        self.enterContext(patch('cad.engine.places.KERNEL', None))
         FakePool.instances = []
         saved = {name: getattr(serve, name) for name in ("READERS", "HELPERS_LINGER")}
         self.addCleanup(lambda: [setattr(serve, name, value) for name, value in saved.items()])

@@ -16,6 +16,8 @@ import { browserClipboard, browserClipboardSupportsImages } from './host/clipboa
 import { createWebPromptContext } from './host/promptContext';
 import { useViewerLinks } from './host/viewerLinks.js';
 import { EngineStopped } from './EngineStopped';
+import { Button } from '@cad/ui/primitives/button';
+import { linkedToolpath, ToolpathView } from './toolpath/ToolpathView';
 import { readDefaultFileParam, readDocumentId, writeDocumentId } from './client/workbench/fileParam.js';
 import { applyColorSchemeToDocument, resolveColorSchemeMode } from './client/ui/colorScheme.js';
 
@@ -67,7 +69,25 @@ export default function App({ client, server, tabStore, language: chosenLanguage
   const promptFiles = useMemo(() => createHttpPromptFiles({ origin: client.origin }), [client]);
   // The view on screen, for the library's pictures of what was opened.
   const live = useMemo(() => createLiveRegistry(), []);
-  const links = useViewerLinks();
+  const baseLinks = useViewerLinks();
+  const [toolpathSource, setToolpathSource] = useState(() => linkedToolpath(window.location.search));
+  const [localToolpathFor, setLocalToolpathFor] = useState<typeof toolpathSource>(null);
+  const [toolpathOpen, setToolpathOpen] = useState(() => Boolean(toolpathSource) && new URLSearchParams(window.location.search).get('view') !== 'model');
+  const openToolpath = useCallback(() => {
+    if (toolpathSource) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('view');
+      window.history.replaceState(window.history.state, '', url);
+    }
+    setToolpathOpen(true);
+  }, [toolpathSource]);
+  const closeToolpath = () => {
+    const url = new URL(window.location.href);
+    if (toolpathSource) url.searchParams.set('view', 'model');
+    window.history.replaceState(window.history.state, '', url);
+    setToolpathOpen(false);
+  };
+  const links = useMemo(() => ({ ...baseLinks, openToolpath }), [baseLinks, openToolpath]);
   // The document the URL names; anything else is the home (an old link's form included), and the
   // URL says `/`.
   const [file, setFile] = useState(() => readDocumentId() || '');
@@ -76,7 +96,7 @@ export default function App({ client, server, tabStore, language: chosenLanguage
   const asked = useRef(0);
   /** Show a document by its id, a file by its absolute path (asked for its id), or the home (''): a
    * new step in the browser's history, or this one's place (`history: 'replace'`). */
-  const show = useCallback(async (next: string, history: 'push' | 'replace' = 'push') => {
+  const show = useCallback(async (next: string, history: 'push' | 'replace' = 'push', toolpath?: string, showToolpath = false) => {
     const turn = ++asked.current;
     const wanted = normalizePath(next);
     let id = !wanted || DOCUMENT_ID.test(wanted) ? wanted : '';
@@ -85,8 +105,19 @@ export default function App({ client, server, tabStore, language: chosenLanguage
       if (turn !== asked.current) return;
       if (!id) { setFile(wanted); return; }  // a file that is not there says so, by its path
     }
-    if (id === shownFile.current) return;
-    writeDocumentId(id, { history });
+    if (id === shownFile.current && !toolpath && !new URLSearchParams(window.location.search).has('toolpath')) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('toolpath')) {
+      params.delete('toolpath');
+      params.delete('view');
+    }
+    if (toolpath) {
+      params.set('toolpath', toolpath);
+      if (!showToolpath) params.set('view', 'model');
+    }
+    writeDocumentId(id, { history, params });
+    setToolpathSource(linkedToolpath(params.toString()));
+    setToolpathOpen(Boolean(toolpath) && showToolpath);
     setFile(id);
   }, [client]);
   useEffect(() => {
@@ -95,7 +126,13 @@ export default function App({ client, server, tabStore, language: chosenLanguage
       const fallback = readDefaultFileParam();  // a developer's build's default file
       if (fallback) void show(fallback, 'replace');
     }
-    const sync = () => { asked.current += 1; setFile(readDocumentId() || ''); };
+    const sync = () => {
+      asked.current += 1;
+      const source = linkedToolpath(window.location.search);
+      setToolpathSource(source);
+      setToolpathOpen(Boolean(source) && new URLSearchParams(window.location.search).get('view') !== 'model');
+      setFile(readDocumentId() || '');
+    };
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
   }, []);
@@ -169,9 +206,23 @@ export default function App({ client, server, tabStore, language: chosenLanguage
     {/* The engine gone, its notice is the page's one: what is under it (a view's own "can't reach"
         card among it) is out of reach and unheard until it is back. */}
     <div className="min-h-0 flex-1" inert={engineGone || undefined} aria-hidden={engineGone || undefined}>
-    <CadViewer client={client} host={host} tabStore={tabStore} live={live} file={file} onShow={next => { void show(next); }} onShown={shown}
+    <CadViewer dockExplorer showAlternateView={toolpathOpen}
+      activeToolpath={toolpathOpen && toolpathSource && toolpathSource !== localToolpathFor && 'path' in toolpathSource ? toolpathSource.path : undefined}
+      alternateView={<ToolpathView key={file + ':' + (toolpathSource?.name ?? '')} initialSource={toolpathSource}
+        open={toolpathOpen} t={sayRef.current} onLocalFile={() => setLocalToolpathFor(toolpathSource)}
+        close={file ? undefined : closeToolpath} />}
+      openProjectArtifact={(model, toolpath, showToolpath) => {
+      void show(model, 'push', toolpath, showToolpath);
+    }} client={client} host={host} tabStore={tabStore} live={live} file={file} onShow={next => { void show(next); }} onShown={shown}
+      fullSize={file ? <div className="flex shrink-0 rounded-md border border-border">
+        <Button variant={toolpathOpen ? 'ghost' : 'secondary'} size="sm" className="rounded-r-none"
+          aria-pressed={!toolpathOpen} onClick={closeToolpath}>{sayRef.current('toolpath.model')}</Button>
+        <Button variant={toolpathOpen ? 'secondary' : 'ghost'} size="sm" className="rounded-l-none"
+          aria-pressed={toolpathOpen} onClick={openToolpath}>G-code</Button>
+      </div> : undefined}
       library={library} onThumbnail={client.keepThumbnail} appSettings={appSettings}
       colorScheme={colorScheme} language={language}
       whatsNew={engineGone ? undefined : { entry: whatsNew.entry, onDismiss: whatsNew.dismiss }} />
+
   </div></div>;
 }

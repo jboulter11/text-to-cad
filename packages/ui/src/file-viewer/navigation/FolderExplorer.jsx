@@ -10,6 +10,7 @@ import { cn } from "@cad/ui/utils";
 import { useI18n } from "@cad/ui/i18n";
 import { FileIcon, FolderIcon } from "./icons.jsx";
 import { DOCUMENT_ROW_GLYPH_CLASS } from "./DocumentGlyph.jsx";
+import { compareExplorerRows, ExplorerSort } from "./ExplorerSort.jsx";
 import { useControlUsage } from "../../usage/controls.js";
 
 // The wait after a keystroke before the filter searches; each keystroke cancels the search before it.
@@ -115,10 +116,12 @@ function Row({ kind, path, detail = "", name, depth = 0, active = false, expande
  * folder it is in is `onFolderChange`'s, for the host to start it there next time.
  *
  * @param {{ source: Pick<import("../types").FileSource, "list" | "search">, file: string, folder?: string | null,
- *   onOpen(path: string): void, onFolderChange?(folder: string): void }} props
+ *   onOpen(path: string): void, onFolderChange?(folder: string): void, sortable?: boolean }} props
  */
-export function FolderExplorer({ source, file, folder: start = null, onOpen, onFolderChange }) {
-  const { t } = useI18n();
+export function FolderExplorer({ source, file, folder: start = null, onOpen, onFolderChange, sortable = false }) {
+  const { t, locale } = useI18n();
+  const [sort, setSort] = useState("modified");
+  const compare = compareExplorerRows(sort, locale);
   const [folder, setFolder] = useState(() => start || parentFolder(file));
   const [listing, setListing] = useState({ folder: "", entries: null, error: null });
   const [query, setQueryState] = useState("");
@@ -201,7 +204,7 @@ export function FolderExplorer({ source, file, folder: start = null, onOpen, onF
 
   // A folder's rows, `depth` folders in: its subfolders, each with what it holds under it while it is
   // open inline, then its files.
-  const rowsOf = (entries, depth) => entries.map(entry => {
+  const rowsOf = (entries, depth) => (sortable ? [...entries].sort(compare) : entries).map(entry => {
     if (entry.kind !== "directory") return <Row key={entry.path} kind="file" path={entry.path} name={entry.name} depth={depth}
       active={entry.path === file} onClick={() => onOpen(entry.path)} />;
     const expanded = open.has(entry.path);
@@ -232,7 +235,8 @@ export function FolderExplorer({ source, file, folder: start = null, onOpen, onF
     else if (result.error) body = <Note>{t("explorer.searchFailed")}</Note>;
     else if (!result.paths.length) body = <Note>{result.truncated ? t("explorer.noMatchesYet") : t("explorer.noMatches")}</Note>;
     else body = <>
-      {result.paths.map(path => {
+      {(sortable ? result.paths.map(path => ({ path, name: path.split("/").pop(), modified: result.modified?.[path] }))
+        .sort(compare).map(entry => entry.path) : result.paths).map(path => {
         const relative = path.startsWith(prefix) ? path.slice(prefix.length) : path;
         const slash = relative.lastIndexOf("/");
         return <Row key={path} kind="file" path={path} active={path === file} detail={slash < 0 ? "" : relative.slice(0, slash + 1)}
@@ -281,6 +285,7 @@ export function FolderExplorer({ source, file, folder: start = null, onOpen, onF
           : <button type="button" className={CRUMB} onClick={() => go(item.path)}>{item.name}</button>}
       </Fragment>)}
     </nav>
+    {sortable && <ExplorerSort value={sort} onChange={setSort} />}
     <TreeFilterInput label={t("explorer.filterLabel")} placeholder={t("explorer.filterPlaceholder")} value={query} onChange={setQuery} onKeyDown={event => walk(event, null)} />
     <ScrollArea className="min-h-0 flex-1" viewportClassName="p-1" viewportRef={rows}
       viewportProps={{ onKeyDown: event => walk(event, event.target.closest?.("[data-explorer-row]") ?? null) }}>

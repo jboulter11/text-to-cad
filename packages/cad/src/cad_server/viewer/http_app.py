@@ -351,8 +351,8 @@ class CadApp:
             "platform": sys.platform if sys.platform in ("darwin", "win32") else "linux",
             # The OS identity of the engine serving this page.
             "user": os_user(),
-            # The person's home folder: where the explorer starts with nowhere else to start.
-            "home": to_posix_path(os.path.expanduser("~")),
+            # Where the Files explorer starts when it has no current folder.
+            "home": to_posix_path(os.environ.get("CAD_VIEWER_FILES_HOME") or os.path.expanduser("~")),
             # The folder of the most recent launch, its relative files' folder. Not a boundary.
             "start": self.start,
             "pick": self.pick,
@@ -1246,7 +1246,17 @@ class CadApp:
 
         path = query.get("path")
         try:
-            answer = search_folder(path, query.get("q")) if query.get("q") is not None else list_folder(path)
+            answer = search_folder(path, query.get("q")) if query.get("q") is not None else list_folder(path, toolpaths=query.get("toolpaths") == "1")
+            paths = answer.get("results")
+            if paths is None:
+                paths = [to_posix_path(os.path.join(answer["path"], entry["name"])) for entry in answer["entries"]]
+            modified = {}
+            for entry_path in paths:
+                try:
+                    modified[entry_path] = os.path.getmtime(entry_path)
+                except OSError:
+                    continue
+            answer["modified"] = modified
         except FileNotFoundError:
             raise ApiError(404, f"No folder at {path}", "name a folder that exists, by its absolute path") from None
         except PermissionError:
@@ -1416,6 +1426,12 @@ class CadApp:
         and a bare "Not found" left nothing to fix."""
         ref = query.get("path") or ""
         candidate = asset_path(ref)
+        if not candidate and query.get("toolpath") == "1":
+            from .folders import _plain_toolpath
+
+            path = absolute_path(ref)
+            if _plain_toolpath(os.path.basename(path)):
+                candidate = path
         if not candidate:
             raise ApiError(404, f"{ref} is not a file the viewer sends: it sends CAD files "
                                 f"({_CAD_EXTENSIONS}) whose names are not hidden", "name a CAD file by its absolute path")

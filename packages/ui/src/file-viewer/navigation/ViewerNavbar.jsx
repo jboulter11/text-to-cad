@@ -178,24 +178,30 @@ function FileMenu({ platform, capabilities, sourceMissing = false, apps = null, 
  * the host's library's models, by last activity, a row opening its model; Files is the explorer
  * (`FolderExplorer`), from the file's folder, or for a model where the explorer was last. Built anew on each opening, on Models over a model and on Files over a file.
  */
-function NameMenu({ path, kind, explorer, recent, onPick }) {
+export function NameMenu({ path, kind, explorer, recent, onPick, sortable = false, projects = /** @type {import("react").ReactNode} */ (null),
+  activeTab = /** @type {string | null} */ (null),
+  onTabChange = /** @type {((tab: string) => void) | undefined} */ (undefined) }) {
   const { t } = useI18n();
   const usage = useControlUsage();
-  const [tab, setTab] = useState(() => firstTab(kind, explorer, recent));
+  const [selectedTab, setTab] = useState(/** @type {string | null} */ (null));
+  const tab = activeTab ?? selectedTab ?? (projects ? "projects" : firstTab(kind, explorer, recent));
   // The tab on screen as last chosen: a press and the focus it brings both ask for the same tab.
   const shownTab = useRef(tab);
-  const files = explorer ? <FolderExplorer source={explorer.source} file={path} folder={explorer.folder} onFolderChange={explorer.onFolderChange}
+  const files = explorer ? <FolderExplorer sortable={sortable} source={explorer.source} file={path} folder={explorer.folder} onFolderChange={explorer.onFolderChange}
     onOpen={next => onPick(explorer.onOpen, next)} /> : null;
-  const models = recent ? <ModelList recent={recent} current={path} onOpen={next => { usage.used("models_open"); onPick(recent.onOpen, next); }} /> : null;
-  if (!files || !models) return files ?? models;
+  const models = recent ? <ModelList sortable={sortable} recent={recent} current={path} onOpen={next => { usage.used("models_open"); onPick(recent.onOpen, next); }} /> : null;
+  if (!projects && (!files || !models)) return files ?? models;
   // A tab a person turns to is a use of it, as the one the menu opens on is (`FileName`).
-  return <Tabs value={tab} onValueChange={next => { if (next !== shownTab.current) usage.used(TAB_CONTROLS[next]); shownTab.current = next; setTab(next); }} className="flex min-h-0 flex-1 flex-col gap-0" data-name-menu="">
+  return <Tabs value={tab} onValueChange={next => { if (next !== shownTab.current && TAB_CONTROLS[next]) usage.used(TAB_CONTROLS[next]); shownTab.current = next; if (onTabChange) onTabChange(next); else setTab(next); }} className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden" data-name-menu="">
     <TabsList className="mx-2 mt-2 h-7 w-fit shrink-0 self-start">
-      <TabsTrigger value="models">{t("explorer.models")}</TabsTrigger>
-      <TabsTrigger value="files">{t("explorer.files")}</TabsTrigger>
+      {projects && <TabsTrigger value="projects">{t("explorer.projects")}</TabsTrigger>}
+      {!projects && models && <TabsTrigger value="models">{t("explorer.models")}</TabsTrigger>}
+      {files && <TabsTrigger value="files">{t("explorer.files")}</TabsTrigger>}
+      {projects && models && <TabsTrigger value="models">{t("explorer.models")}</TabsTrigger>}
     </TabsList>
-    <TabsContent value="models" className="flex min-h-0 flex-col">{models}</TabsContent>
-    <TabsContent value="files" className="flex min-h-0 flex-col">{files}</TabsContent>
+    <TabsContent value="models" className="flex min-h-0 flex-1 flex-col">{models}</TabsContent>
+    <TabsContent value="files" className="flex min-h-0 flex-1 flex-col">{files}</TabsContent>
+    {projects && <TabsContent value="projects" className="flex min-h-0 flex-1 flex-col">{projects}</TabsContent>}
   </Tabs>;
 }
 
@@ -207,7 +213,7 @@ const firstTab = (kind, explorer, recent) => (!explorer ? "models" : !recent ? "
  * name menu's door: the name and its chevron, transparent until the pointer is on it, opening the
  * menu under it. Where it cannot, it is the name alone, in the same place.
  */
-function FileName({ path, name: given, kind = "file", explorer, recent }) {
+function FileName({ path, name: given, kind = "file", explorer, recent, sortable = false, projects = /** @type {import("react").ReactNode} */ (null) }) {
   const [open, setOpen] = useState(false);
   const mobile = useViewerMobile();
   const usage = useControlUsage();
@@ -241,7 +247,7 @@ function FileName({ path, name: given, kind = "file", explorer, recent }) {
     <PopoverContent align="start" sideOffset={8} data-file-explorer="" onOpenAutoFocus={focusFilter} onKeyDown={intoRows}
       className={cn(FLOATING_SURFACE_CLASS, "flex max-h-[min(28rem,var(--radix-popover-content-available-height))] w-[17.5rem] max-w-[calc(100vw-1rem)] flex-col overflow-hidden p-0")}>
       {/* Remounted on each opening, so it starts on its first tab, in the open file's folder. */}
-      <NameMenu path={path} kind={kind} explorer={explorer} recent={recent} onPick={pick} />
+      <NameMenu path={path} kind={kind} explorer={explorer} recent={recent} onPick={pick} sortable={sortable} projects={projects} />
     </PopoverContent>
   </Popover>;
 }
@@ -255,6 +261,8 @@ function FileName({ path, name: given, kind = "file", explorer, recent }) {
  * @param {string | null} [props.file] The open file, by its absolute path (a document with no file of its own: its id).
  * @param {string} [props.name] The document's name where its path does not give it (a model's).
  * @param {"model" | "file"} [props.kind] What the open document is: its glyph, and the name menu's first tab.
+ * @param {import("react").ReactNode} [props.projects] The host's Projects pane.
+ * @param {boolean} [props.sortable] Whether the document browser offers sorting.
  * @param {{ source: Pick<import("../types").FileSource, "list" | "search">, folder?: string | null, onOpen(path: string): void } | null} [props.explorer]
  *   Where the host's files can be browsed: the name menu's Files, from `folder` where given.
  * @param {{ list(): Promise<readonly import("../types").RecentDocument[]>, onOpen(path: string): void } | null} [props.recent]
@@ -267,7 +275,7 @@ function FileName({ path, name: given, kind = "file", explorer, recent }) {
  * @param {import("react").ReactNode} [props.actions] The host's own controls at the right end (the CAD app's Full size).
  * @param {string} [props.className]
  */
-export function ViewerNavbar({ onHome: goHome, menu = null, history = null, file = null, name, kind = "file", explorer = null, recent = null, fileMenu = null, trailing = null, actions = null, className }) {
+export function ViewerNavbar({ onHome: goHome, menu = null, history = null, file = null, name, kind = "file", sortable = false, projects = /** @type {import("react").ReactNode} */ (null), explorer = null, recent = null, fileMenu = null, trailing = null, update = null, actions = null, className }) {
   const { t } = useI18n();
   const usage = useControlUsage();
   const onHome = goHome ? () => { usage.used("home"); goHome(); } : goHome;
@@ -284,7 +292,7 @@ export function ViewerNavbar({ onHome: goHome, menu = null, history = null, file
         {/* A phone's row has no room for them: Back and Forward are a desktop's alone. */}
         {history && !mobile ? <HistoryButtons viewHistory={history} /> : null}
         {file ? <span className="flex min-w-0 items-center">
-          <FileName path={file} name={name} kind={kind} explorer={explorer} recent={recent} />
+          <FileName path={file} name={name} kind={kind} explorer={explorer} sortable={sortable} projects={projects} recent={recent} />
           {fileMenu ? <FileMenu {...fileMenu} /> : null}
         </span> : null}
       </nav>

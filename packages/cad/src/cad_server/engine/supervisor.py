@@ -787,6 +787,20 @@ class Supervisor:
             self._grant()
         self._retire(process)
 
+    def retire_idle(self, seconds: float) -> None:
+        """Drain idle services after their last lease, including ones without an RSS reading."""
+        cutoff = time.monotonic() - seconds
+        with self.lock:
+            expired = [(place, process) for place, process in self.table.items()
+                       if not process.leased and process.used <= cutoff]
+            for place, process in expired:
+                del self.table[place]
+                self._note(process, "idle")
+            if expired:
+                self._grant()
+        for _place, process in expired:
+            self._retire(process)
+
     def _restand(self) -> None:
         """Each standby owed -- retired for the slot of a lease in its caller's Python (``_Standing.owed``) --
         stood again in the environment it is owed in, where there is room for it now (``stand`` says)."""

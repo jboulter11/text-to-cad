@@ -68,7 +68,7 @@ def _listed(name: str) -> bool:
     return not is_hidden_name(name) and extension_of(name) in VIEWER_EXTENSIONS
 
 
-def _entries(folder: str, cache: str | None = None):
+def _entries(folder: str, cache: str | None = None, *, toolpaths: bool = False):
     """``(name, kind)`` for each subfolder worth walking and each CAD file in ``folder``, unsorted: a
     hidden or build folder only where it leads to the engine's cache (``cache``)."""
     cache = _cache() if cache is None else cache
@@ -78,16 +78,20 @@ def _entries(folder: str, cache: str | None = None):
                 if entry.is_dir():
                     if not _skipped(entry.name) or _toward_cache(entry.path, cache):
                         yield entry.name, "directory"
-                elif entry.is_file() and _listed(entry.name):
+                elif entry.is_file() and (_listed(entry.name) or (toolpaths and _plain_toolpath(entry.name))):
                     yield entry.name, "file"
             except OSError:  # a broken link or an entry that went away while it was read
                 continue
 
 
-def list_folder(path: object) -> dict:
+def _plain_toolpath(name: str) -> bool:
+    return not is_hidden_name(name) and extension_of(name) == ".gcode"
+
+
+def list_folder(path: object, *, toolpaths: bool = False) -> dict:
     """``{path, entries: [{name, kind}], truncated}``: subfolders first, then CAD files, in natural order."""
     folder = absolute_folder(path)
-    entries = sorted(_entries(folder), key=lambda item: (item[1] != "directory", collation_key(item[0])))
+    entries = sorted(_entries(folder, toolpaths=toolpaths), key=lambda item: (item[1] != "directory", collation_key(item[0])))
     return {"path": _slashed(folder), "entries": [{"name": name, "kind": kind} for name, kind in entries[:LIST_LIMIT]],
             "truncated": len(entries) > LIST_LIMIT}
 

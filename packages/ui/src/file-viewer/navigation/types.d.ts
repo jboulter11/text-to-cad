@@ -86,6 +86,8 @@ export const ViewerNavbar: ComponentType<{
   /** The view's own history, where the host keeps one: Back and Forward, each disabled where there is nowhere to go. */
   history?: import("../types.js").ViewerHistory | null;
   /** The open file, by its absolute path. */
+  sortable?: boolean;
+  projects?: ReactNode;
   file?: string | null;
   /** The document's name where its path does not give it (a model's). */
   name?: string;

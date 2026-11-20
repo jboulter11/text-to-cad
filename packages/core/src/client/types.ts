@@ -93,9 +93,9 @@ export interface CadCatalog {
   [key: string]: unknown;
 }
 /** One folder's subfolders and CAD files (`GET /api/v1/local/folder`). */
-export interface CadFolder { path: string; entries: { name: string; kind: 'directory' | 'file' }[]; truncated: boolean }
+export interface CadFolder { path: string; entries: { name: string; kind: 'directory' | 'file' }[]; truncated: boolean; modified?: Record<string, number> }
 /** The CAD files nested under a folder whose path below it holds the query (`GET /api/v1/local/folder?q=`). */
-export interface CadSearch { path: string; results: string[]; truncated: boolean }
+export interface CadSearch { path: string; results: string[]; truncated: boolean; modified?: Record<string, number> }
 export interface CadCatalogSnapshot {
   entries: CadEntry[];
   revision: number;
@@ -208,7 +208,7 @@ export interface CadWorkspaceService {
   /** The row the catalog has of a document (its path, or its id), joined by the document's id; null when it has none. */
   entryOf?(path: string): CadEntry | null;
   serverInfo(options?: CadRequestOptions & { fresh?: boolean }): Promise<CadServerInfo>;
-  folder(path: string, options?: CadRequestOptions): Promise<CadFolder>;
+  folder(path: string, options?: CadRequestOptions & { toolpaths?: boolean }): Promise<CadFolder>;
   search(path: string, query: string, options?: CadRequestOptions): Promise<CadSearch>;
   /** The home's library, newest first. */
   recents(options?: CadRequestOptions): Promise<CadRecent[]>;

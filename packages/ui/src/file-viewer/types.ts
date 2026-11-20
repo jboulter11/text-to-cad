@@ -6,7 +6,7 @@ import type { LanguageSetting } from "../i18n/index.js";
 export type { LanguageSetting };
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
-export interface FileEntry { path: string; name: string; kind: "file" | "directory" }
+export interface FileEntry { path: string; name: string; kind: "file" | "directory"; modified?: number }
 export interface FileMetadata extends FileEntry {
   /**
    * The on-disk file to browse from and act on (its Files, Copy path, Reveal); omitted it is
@@ -41,6 +41,7 @@ export interface RecentDocument {
   opened?: number | null;
   updated?: number | null;
   missing?: boolean;
+  script?: string | null;
 }
 /**
  * One app Open in offers for a file: its id (what `openApp` names) and its name, as drawn (a KiCad's says its
@@ -80,8 +81,8 @@ export interface FileSource {
   /** Stable identity: what a document's key is named by. */
   id: string;
   stat: (path: string, options: { signal: AbortSignal }) => Promise<FileMetadata>;
-  list?: (directory: string, options: { signal: AbortSignal }) => Promise<readonly FileEntry[]>;
-  search?: (directory: string, query: string, options: { signal: AbortSignal }) => Promise<{ paths: readonly string[]; truncated: boolean }>;
+  list?: (directory: string, options: { signal: AbortSignal; toolpaths?: boolean }) => Promise<readonly FileEntry[]>;
+  search?: (directory: string, query: string, options: { signal: AbortSignal }) => Promise<{ paths: readonly string[]; truncated: boolean; modified?: Readonly<Record<string, number>> }>;
 }
 export interface FileViewerState {
   /**
@@ -229,6 +230,13 @@ export interface FileViewerProps {
    * file's Files starts in its own folder.
    */
   explorerFolder?: string | null;
+  /** Dock the document browser above the model inspector on desktop. */
+  dockExplorer?: boolean;
+  activeToolpath?: string;
+  alternateView?: ReactNode;
+  showAlternateView?: boolean;
+  projectsRoot?: string | null;
+  openProjectArtifact?(model: string, toolpath?: string, showToolpath?: boolean): void;
   /** The folder the explorer is in, each time it changes: the host keeps it for `explorerFolder`. */
   onExplorerFolderChange?(folder: string): void;
   /** The host's notice, shown at the viewport's top-right once the file is on screen (`RendererViewProps.notice`). */
