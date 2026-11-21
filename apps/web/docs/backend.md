@@ -125,12 +125,17 @@ file to hash it never holds up its deletion: the catalog opens models with delet
 sharing on Windows, and a model that vanishes mid-read gets an empty hash on that
 request and has no row on the next.
 
-The explorer's two reads are `GET /api/v1/local/folder?path=<abs>` (one folder's
+The Files tab uses `GET /api/v1/local/folder?path=<abs>` (one folder's
 subfolders and CAD files, natural order) and the same with `&q=`
 (the CAD files under a folder whose path below it holds `q`, bounded by matches,
 depth and time, and saying when it stopped early; `cad_server.viewer.folders`). A
 relative path is a 400, a path that is not a folder a 404, one that cannot be
 read a 403.
+
+Projects reads the same endpoint with `&projects=1` for its working files. Each entry
+names a supported CAD file or toolpath as `<project>/<file>` relative to the
+configured CAD home. Only direct children of project directories are inspected.
+The visible Projects panel refreshes this inventory every five seconds.
 
 `/api/v1/local/files` (and a file document's `source`) sends only CAD files, and never a file whose own name is hidden:
 a model script, a config, a `.json` beside a model or a key is a 404 whatever path names
@@ -201,7 +206,7 @@ document of another kind is a 404 naming the right one (`"<id> is a step"`).
 | `POST /api/v1/documents/<id>/exports` | An export of it (below). |
 | `GET /api/v1/documents/<kind>/<id>/...` | Its kind's reads: a model's, an `.xbf`'s and a STEP's `structure`, `parts/<key>` (and `faces\|edges\|vertices/<ordinal>`, `groups`, `volume`), `measure`, `kinematics`, `POST pose`, `POST mesh`; a DXF's `drawing` (below); a KiCad board's `plot` and `drc`, and a schematic's `plot` (`cad_server.viewer.plots`; the payload is `@cad/core`'s `docs/plot-payload.md`); a robot description's `structure` (`cad_server.robot_payload`: its articulation, its visuals at rest) and `parts/<hash>`, a primitive the engine meshed, by its digest; and every file's `source`, its bytes. |
 | `GET /api/v1/local/files?path=...` | A CAD file's bytes, by its absolute path (a robot's link mesh, a file a model's file names beside it). |
-| `GET /api/v1/local/folder?path=...[&q=...]` | One folder's subfolders and CAD files; with `q`, the CAD files under it whose path holds `q`, bounded. |
+| `GET /api/v1/local/folder?path=...[&q=...][&projects=1]` | One folder's subfolders and CAD files; with `q`, the CAD files under it whose path holds `q`, bounded. With `projects=1`, the working files of immediate project directories. |
 | `POST /api/v1/local/reveal` | `{path}`: show a file in the desktop's file manager. |
 | `POST /api/v1/local/pick` | Open the machine's own file chooser (`cad_server._internal.picker`) and answer the file picked; the home offers it where the server's `pick` says there is one. |
 | `POST /api/v1/local/clipboard` | A PNG onto this machine's clipboard: the web page's picture copy, which asks the browser for no permission. |

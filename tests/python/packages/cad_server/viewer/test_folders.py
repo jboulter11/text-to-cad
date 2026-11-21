@@ -38,6 +38,22 @@ class FoldersTest(unittest.TestCase):
             self.assertEqual(list_folder(str(self.root)), {"path": slashed(self.root), "entries": [{"name": "arm", "kind": "directory"}],
                                                           "truncated": True})
 
+    def test_projects_discover_live_working_files_only_one_folder_below_home(self) -> None:
+        def files():
+            return [entry["name"] for entry in folders.list_project_files(str(self.root))["entries"]]
+
+        self.assertEqual(files(), ["arm/link2.step", "arm/link10.step"])
+        for name in ("bathroom/two.step", "bathroom/floor.dxf", "bathroom/two.gcode.3mf", "bathroom/two.gcode",
+                     "bathroom/release/v1/archived.stl", ".git/private.step", "node_modules/test.stl"):
+            path = self.root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.touch()
+        self.assertEqual(set(files()), {"arm/link2.step", "arm/link10.step", "bathroom/two.step",
+                                         "bathroom/floor.dxf", "bathroom/two.gcode.3mf", "bathroom/two.gcode"})
+        (self.root / "bathroom/two.step").rename(self.root / "bathroom/renamed.step")
+        self.assertIn("bathroom/renamed.step", files())
+        self.assertNotIn("bathroom/two.step", files())
+
     def test_only_an_existing_absolute_folder_is_read(self) -> None:
         with self.assertRaises(ValueError):
             list_folder("arm")

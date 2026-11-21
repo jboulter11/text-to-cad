@@ -1242,11 +1242,16 @@ class CadApp:
         """``GET /api/v1/local/folder``: the explorer's reads (``folders.py``): one folder's entries,
         or, with ``q``, the CAD files under it whose path holds ``q``. A path that is not absolute
         is ``folders``' ValueError: a 400, through the funnel."""
-        from .folders import list_folder, search_folder
+        from .folders import list_folder, list_project_files, search_folder
 
         path = query.get("path")
         try:
-            answer = search_folder(path, query.get("q")) if query.get("q") is not None else list_folder(path, toolpaths=query.get("toolpaths") == "1")
+            if query.get("projects") == "1":
+                answer = list_project_files(path)
+            elif query.get("q") is not None:
+                answer = search_folder(path, query["q"])
+            else:
+                answer = list_folder(path, toolpaths=query.get("toolpaths") == "1")
             paths = answer.get("results")
             if paths is None:
                 paths = [to_posix_path(os.path.join(answer["path"], entry["name"])) for entry in answer["entries"]]

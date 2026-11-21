@@ -333,8 +333,8 @@ export function createCadClient({ origin = '', fetch: fetchImpl = globalThis.fet
     },
     // One folder's subfolders and CAD files, and the CAD files nested under a folder whose path
     // below it holds `query` (bounded by the server, which says when it stopped early).
-    folder(path, { signal, toolpaths } = {}) {
-      return request(`${API}/local/folder`, { params: { path, ...(toolpaths ? { toolpaths: '1' } : {}) }, signal, timeoutMs: 10_000, operation: 'folder' });
+    folder(path, { signal, toolpaths, projects } = {}) {
+      return request(`${API}/local/folder`, { params: { path, ...(toolpaths ? { toolpaths: '1' } : {}), ...(projects ? { projects: '1' } : {}) }, signal, timeoutMs: 10_000, operation: 'folder' });
     },
     search(path, query, { signal } = {}) {
       // `q` rides in the query even empty: it is what makes the read a search.

@@ -81,7 +81,7 @@ export interface FileSource {
   /** Stable identity: what a document's key is named by. */
   id: string;
   stat: (path: string, options: { signal: AbortSignal }) => Promise<FileMetadata>;
-  list?: (directory: string, options: { signal: AbortSignal; toolpaths?: boolean }) => Promise<readonly FileEntry[]>;
+  list?: (directory: string, options: { signal: AbortSignal; toolpaths?: boolean; projects?: boolean }) => Promise<readonly FileEntry[]>;
   search?: (directory: string, query: string, options: { signal: AbortSignal }) => Promise<{ paths: readonly string[]; truncated: boolean; modified?: Readonly<Record<string, number>> }>;
 }
 export interface FileViewerState {

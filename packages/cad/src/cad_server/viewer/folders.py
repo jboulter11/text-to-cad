@@ -96,6 +96,25 @@ def list_folder(path: object, *, toolpaths: bool = False) -> dict:
             "truncated": len(entries) > LIST_LIMIT}
 
 
+def list_project_files(path: object) -> dict:
+    """List working artifacts one project directory below the root, with project-relative names."""
+    root = absolute_folder(path)
+    files = []
+    with os.scandir(root) as projects:
+        for project in projects:
+            try:
+                if _skipped(project.name) or not project.is_dir(follow_symlinks=False):
+                    continue
+                with os.scandir(project.path) as entries:
+                    for entry in entries:
+                        if (_listed(entry.name) or _plain_toolpath(entry.name)) and entry.is_file():
+                            files.append({"name": f"{project.name}/{entry.name}", "kind": "file"})
+            except OSError:  # A project can be removed or become unreadable during discovery.
+                continue
+    files.sort(key=lambda entry: collation_key(entry["name"]))
+    return {"path": _slashed(root), "entries": files, "truncated": False}
+
+
 def search_folder(path: object, query: object, *, limit: int = SEARCH_LIMIT, seconds: float = SEARCH_SECONDS,
                   depth: int = SEARCH_DEPTH, clock: Callable[[], float] = time.monotonic) -> dict:
     """``{path, results, truncated}``: the CAD files under ``path`` whose path below it contains ``query``.
