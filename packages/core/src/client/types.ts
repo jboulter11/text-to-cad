@@ -208,7 +208,7 @@ export interface CadWorkspaceService {
   /** The row the catalog has of a document (its path, or its id), joined by the document's id; null when it has none. */
   entryOf?(path: string): CadEntry | null;
   serverInfo(options?: CadRequestOptions & { fresh?: boolean }): Promise<CadServerInfo>;
-  folder(path: string, options?: CadRequestOptions & { toolpaths?: boolean }): Promise<CadFolder>;
+  folder(path: string, options?: CadRequestOptions & { toolpaths?: boolean; projects?: boolean }): Promise<CadFolder>;
   search(path: string, query: string, options?: CadRequestOptions): Promise<CadSearch>;
   /** The home's library, newest first. */
   recents(options?: CadRequestOptions): Promise<CadRecent[]>;

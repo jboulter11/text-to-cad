@@ -64,12 +64,12 @@ export function createCadFileSource(client: Pick<CadWorkspaceService, 'resolveEn
         extension: byId ? 'xbf' : name.split('.').pop()?.toLowerCase() || '', mediaType: byId ? 'cad-document' : 'cad',
         revision: contentRevision(entry) };
     },
-    async list(directory, { signal, toolpaths }) {
-      const folder = await client.folder(directory, { signal, ...(toolpaths ? { toolpaths } : {}) });
+    async list(directory, { signal, toolpaths, projects }) {
+      const folder = await client.folder(directory, { signal, ...(toolpaths ? { toolpaths } : {}), ...(projects ? { projects } : {}) });
       return folder.entries.map(entry => {
         const path = joinPath(folder.path, entry.name);
         const modified = folder.modified?.[path];
-        return { path, name: entry.name, kind: entry.kind, ...(modified === undefined ? {} : { modified }) };
+        return { path, name: baseName(path), kind: entry.kind, ...(modified === undefined ? {} : { modified }) };
       });
     },
     async search(directory, query, { signal }) {
