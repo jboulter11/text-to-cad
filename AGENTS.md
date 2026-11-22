@@ -8,11 +8,11 @@ product and `models/` as the shared fixture/artifact area. Read this file, then
 [CONTRIBUTING.md](CONTRIBUTING.md) for the workflows it points at; every other
 document is one link from the README of the tree it belongs to (Repo Map).
 
-## Branch First
+## Git workflow
 
-`main` is the only branch you develop on: the source tree, and what releases
-are cut from. Branch from `main` and open PRs against `main`; never push it
-directly. There is no development symlink layout — every path in the tree is the
+Commit and push changes directly to `main` by default. Open a pull request only when the user explicitly asks for one.
+
+There is no development symlink layout — every path in the tree is the
 real file. Installers follow `latest`, claude.ai's directory `claude-plugin` and
 Codex's `codex-plugin`: the plugin alone, one commit per release,
 written only by `Publish Release` once the release is on PyPI (see below); never
