@@ -1,25 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Color, InstancedBufferGeometry, InterleavedBufferAttribute, Mesh,
+  BufferGeometry, Float32BufferAttribute, Points, PointsMaterial, Color, InstancedBufferGeometry, InterleavedBufferAttribute, Mesh,
   PerspectiveCamera, Scene, Vector3, WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { extrusionGeometry, extrusionMaterial } from './extrusion';
 import { toolColor } from './parse.js';
 
-export type Layer = { z: number; paths: Float32Array };
+export type Layer = { z: number; paths: Float32Array; seams: Float32Array };
 type CameraView = 'top' | 'bottom';
 type CameraState = { position: Vector3; target: Vector3 };
 type ViewportProps = {
-  layers: Layer[]; bounds: number[]; colors: string[]; index: number; cumulative: boolean; colorByHeight: boolean; lineWidth: number;
+  layers: Layer[]; bounds: number[]; colors: string[]; index: number; cumulative: boolean; colorByHeight: boolean; showSeams: boolean; lineWidth: number;
   view: { side: CameraView }; label: string; unavailable: string;
   cameraState: { current: CameraState | null };
 };
 
-export function ToolpathViewport({ layers, bounds, colors, index, cumulative, colorByHeight, lineWidth, view, label, unavailable, cameraState }: ViewportProps) {
+export function ToolpathViewport({ layers, bounds, colors, index, cumulative, colorByHeight, showSeams, lineWidth, view, label, unavailable, cameraState }: ViewportProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const runtime = useRef<{
-    draw: () => void; show: (index: number, cumulative: boolean) => void; geometry: InstancedBufferGeometry; rgb: Float32Array; camera: PerspectiveCamera; orbit: OrbitControls; center: Vector3; distance: number;
+    draw: () => void; show: (index: number, cumulative: boolean, showSeams: boolean) => void; geometry: InstancedBufferGeometry; rgb: Float32Array; camera: PerspectiveCamera; orbit: OrbitControls; center: Vector3; distance: number;
   }>(null);
   const lastView = useRef(view);
   const [failed, setFailed] = useState(false);
@@ -72,8 +72,25 @@ export function ToolpathViewport({ layers, bounds, colors, index, cumulative, co
     const lines = new Mesh(geometry, material);
     lines.frustumCulled = false;
     scene.add(lines);
+    const seamPositions: number[] = [];
+    const seamEnds = [0];
+    for (const layer of layers) {
+      for (let i = 0; i < layer.seams.length; i += 2) {
+        seamPositions.push(layer.seams[i], layer.seams[i + 1], layer.z);
+      }
+      seamEnds.push(seamPositions.length / 3);
+    }
+    const seamGeometry = new BufferGeometry();
+    seamGeometry.setAttribute('position', new Float32BufferAttribute(seamPositions, 3));
+    const seamMaterial = new PointsMaterial({ color: 0xff3699, size: 5, sizeAttenuation: false, depthTest: false, depthWrite: false });
+    const markers = new Points(seamGeometry, seamMaterial);
+    markers.renderOrder = 1;
+    scene.add(markers);
     let singleLayer: InstancedBufferGeometry | undefined;
-    const show = (index: number, cumulative: boolean) => {
+    const show = (index: number, cumulative: boolean, showSeams: boolean) => {
+      markers.visible = showSeams;
+      const firstSeam = cumulative ? 0 : seamEnds[index];
+      seamGeometry.setDrawRange(firstSeam, seamEnds[index + 1] - firstSeam);
       singleLayer?.dispose();
       singleLayer = undefined;
       const end = ends[index + 1];
@@ -116,6 +133,8 @@ export function ToolpathViewport({ layers, bounds, colors, index, cumulative, co
       singleLayer?.dispose();
       geometry.dispose();
       material.dispose();
+      seamGeometry.dispose();
+      seamMaterial.dispose();
       renderer.dispose();
       runtime.current = null;
     };
@@ -149,8 +168,8 @@ export function ToolpathViewport({ layers, bounds, colors, index, cumulative, co
   }, [layers, bounds, cameraState, colors, colorByHeight, lineWidth]);
 
   useEffect(() => {
-    runtime.current?.show(index, cumulative);
-  }, [layers, bounds, cameraState, colors, colorByHeight, lineWidth, index, cumulative]);
+    runtime.current?.show(index, cumulative, showSeams);
+  }, [layers, bounds, cameraState, colors, colorByHeight, lineWidth, index, cumulative, showSeams]);
 
   useEffect(() => {
     const current = runtime.current;

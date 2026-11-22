@@ -50,3 +50,26 @@ G3 X4 Y1 I.5 J0 E1
   assert.deepEqual([...result.layers[1].paths.slice(-3)], [4, 1, 0]);
   assert.throws(() => parseToolpaths('G1 X10 Y10\nG1 E-2'), /noExtrusion/);
 });
+
+test('seams mark near-closed outer wall loops, excluding infill, travel, and open wall fragments', () => {
+  const gcode = `M83
+;LAYER_CHANGE
+G1 Z0.2
+;TYPE:External perimeter
+G1 X3 E0.1
+G1 Y3 E0.1
+G1 X0 E0.1
+G1 Y0.06 E0.1
+G0 X10 Y10
+G1 X15 E0.1
+;TYPE:Internal infill
+G1 X10 E0.1
+;LAYER_CHANGE
+G1 Z0.4
+; FEATURE: Outer wall
+G1 X17 E0.1
+G1 Y12 E0.1
+G1 X10 E0.1
+G1 Y10 E0.1`;
+  assert.deepEqual(parseToolpaths(gcode).layers.map(layer => [...layer.seams]), [[0, 0], [10, 10]]);
+});

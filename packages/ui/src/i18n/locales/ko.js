@@ -18,6 +18,7 @@ export default {
   "toolpath.canvas": "압출 툴패스",
   "toolpath.layer": "레이어",
   "toolpath.layerHeight": "레이어 {layer} / {total} · Z {z} mm",
+  "toolpath.seams": "외벽 이음매",
   "toolpath.heightColors": "높이별 색상",
   "toolpath.filaments": "필라멘트",
   "toolpath.filament": "필라멘트 {number}",

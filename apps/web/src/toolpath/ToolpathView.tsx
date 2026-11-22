@@ -24,6 +24,7 @@ export function ToolpathView({ initialSource, open, close, t, onLocalFile }: {
   const [view, setView] = useState<{side: 'top' | 'bottom'}>({ side: 'top' });
   const [cumulative, setCumulative] = useState(true);
   const [colorByHeight, setColorByHeight] = useState(false);
+  const [showSeams, setShowSeams] = useState(true);
   const picker = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -82,7 +83,7 @@ export function ToolpathView({ initialSource, open, close, t, onLocalFile }: {
         </select>
       </label>}
       <ToolpathViewport layers={preview.layers} bounds={preview.bounds} colors={preview.colors}
-        index={index} cumulative={cumulative} colorByHeight={colorByHeight} lineWidth={preview.lineWidth} view={view} cameraState={cameraState}
+        index={index} showSeams={showSeams} cumulative={cumulative} colorByHeight={colorByHeight} lineWidth={preview.lineWidth} view={view} cameraState={cameraState}
         label={t('toolpath.canvas')} unavailable={t('toolpath.webgl')} />
       <div className="flex shrink-0 items-center gap-3">
         <Slider className="flex-1" defaultValue={undefined} origin={undefined} min={0} max={Math.max(1, preview.layers.length - 1)} value={[index]}
@@ -104,6 +105,8 @@ export function ToolpathView({ initialSource, open, close, t, onLocalFile }: {
         <Button variant="outline" onClick={() => setView({ side: 'bottom' })}>{t('toolpath.underside')}</Button>
         <Button variant={colorByHeight ? 'default' : 'outline'} aria-pressed={colorByHeight}
           onClick={() => setColorByHeight(value => !value)}>{t('toolpath.heightColors')}</Button>
+        <Button variant={showSeams ? 'default' : 'outline'} aria-pressed={showSeams}
+          onClick={() => setShowSeams(value => !value)}><span aria-hidden="true" style={{color:'#ff3699'}}>●</span>{t('toolpath.seams')}</Button>
         <Button variant={cumulative ? 'default' : 'outline'} aria-pressed={cumulative}
           onClick={() => setCumulative(value => !value)}>{t('toolpath.earlierLayers')}</Button>
       </>}

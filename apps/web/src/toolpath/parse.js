@@ -16,9 +16,26 @@ export function parseToolpaths(text, colors = []) {
   let layer = null, count = 0;
   const bounds = [Infinity, Infinity, -Infinity, -Infinity];
 
+  let outerWall = false;
+  let wall = null;
+
+  function finishWall() {
+    // Slicers can leave a small seam gap between the first and last bead.
+    if (wall && wall.length > 2 && Math.hypot(wall.x - wall.endX, wall.y - wall.endY) <= 0.8) {
+      wall.layer.seams.push(wall.x, wall.y);
+    }
+    wall = null;
+  }
+
   function add(x, y, nextX, nextY) {
     if (x === nextX && y === nextY) return;
     if (++count > maxSegments) throw new Error('tooComplex');
+    if (outerWall) {
+      wall ??= { layer, x, y, endX: x, endY: y, length: 0 };
+      wall.endX = nextX;
+      wall.endY = nextY;
+      wall.length += Math.hypot(nextX - x, nextY - y);
+    }
     bounds[0] = Math.min(bounds[0], x, nextX);
     bounds[1] = Math.min(bounds[1], y, nextY);
     bounds[2] = Math.max(bounds[2], x, nextX);
@@ -31,7 +48,9 @@ export function parseToolpaths(text, colors = []) {
     if (line.startsWith(';')) {
       if (line === '; MACHINE_END_GCODE_START') break;
       if (layerMarker.test(line)) {
-        layer = { z: null, paths: [] };
+        finishWall();
+        outerWall = false;
+        layer = { z: null, paths: [], seams: [] };
         layers.push(layer);
         skipFeature = false;
       }
@@ -39,8 +58,12 @@ export function parseToolpaths(text, colors = []) {
       if (layer && height) layer.z = Number(height[1]);
       const filament = /^;\s*VT(\d+)\b/.exec(line);
       if (filament) tool = Number(filament[1]);
-      const feature = /^;\s*FEATURE:\s*(.*)/.exec(line);
-      if (feature) skipFeature = feature[1] === 'Custom' || feature[1] === 'Wipe';
+      const feature = /^;\s*(?:FEATURE|TYPE):\s*(.*)/.exec(line);
+      if (feature) {
+        finishWall();
+        outerWall = /^(Outer wall|External perimeter|WALL-OUTER)$/i.test(feature[1]);
+        skipFeature = feature[1] === 'Custom' || feature[1] === 'Wipe';
+      }
       const colorLine = /^;\s*filament_colou?r\s*=\s*(.*)/i.exec(line);
       if (colorLine && !colors.length) colors = colorLine[1].split(';').map(value => value.trim());
       continue;
@@ -49,6 +72,7 @@ export function parseToolpaths(text, colors = []) {
     const code = line.split(';', 1)[0].trim();
     const selected = /^(?:T(\d+)\b|M621\s+S(\d+)A\b)/i.exec(code);
     if (selected) {
+      finishWall();
       const candidate = Number(selected[1] ?? selected[2]);
       if (candidate < 255) tool = candidate;
       continue;
@@ -77,9 +101,11 @@ export function parseToolpaths(text, colors = []) {
     const e = values.E == null ? 0 : (relativeE ?? relative) ? values.E : values.E - axes.E;
     for (const axis of ['X', 'Y', 'Z']) if (axis in values) axes[axis] = values[axis] + (relative ? axes[axis] : 0);
     if ('E' in values && !(relativeE ?? relative)) axes.E = values.E;
+    if (e <= 0 && (axes.X !== x || axes.Y !== y || e < 0)) finishWall();
     if (e <= 0 || skipFeature || (marked && !layer)) continue;
     if (!layer || (!marked && Math.abs(layer.z - axes.Z) > 0.001)) {
-      layer = { z: axes.Z, paths: [] };
+      finishWall();
+      layer = { z: axes.Z, paths: [], seams: [] };
       layers.push(layer);
     }
     layer.z ??= axes.Z;
@@ -100,9 +126,10 @@ export function parseToolpaths(text, colors = []) {
       add(x, y, axes.X, axes.Y);
     }
   }
+  finishWall();
   if (!count) throw new Error('noExtrusion');
   const rendered = layers.filter(entry => entry.paths.length).map(entry => ({
-    z: entry.z, paths: Float32Array.from(entry.paths),
+    z: entry.z, paths: Float32Array.from(entry.paths), seams: Float32Array.from(entry.seams),
   }));
   return { layers: rendered, bounds, colors };
 }
