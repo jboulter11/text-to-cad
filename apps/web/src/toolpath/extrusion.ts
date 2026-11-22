@@ -5,11 +5,30 @@ import {
 
 export function extrusionGeometry(positions: Float32Array, colors: Float32Array) {
   const geometry = new InstancedBufferGeometry();
-  geometry.setIndex([0, 1, 2, 2, 1, 3]);
-  geometry.setAttribute('position', new Float32BufferAttribute([
-    0, -1, 0, 1, -1, 0, 0, 1, 0, 1, 1, 0,
-  ], 3));
-
+  // Two semicircular ends form a capsule. Store longitudinal offsets separately
+  // from endpoint selection so short moves keep their full bead width.
+  const vertices: number[] = [], offsets: number[] = [], indices: number[] = [];
+  const capSteps = 4;
+  const ring = 2 * (capSteps + 1);
+  for (const z of [0, 1]) {
+    for (const endpoint of [1, 0]) {
+      for (let i = 0; i <= capSteps; i++) {
+        const angle = (endpoint ? -Math.PI / 2 : Math.PI / 2) + i * Math.PI / capSteps;
+        vertices.push(endpoint, Math.sin(angle), z);
+        offsets.push(Math.cos(angle));
+      }
+    }
+  }
+  for (let i = 1; i < ring - 1; i++) {
+    indices.push(0, i + 1, i, ring, ring + i, ring + i + 1);
+  }
+  for (let i = 0; i < ring; i++) {
+    const j = (i + 1) % ring;
+    indices.push(i, j, j + ring, i, j + ring, i + ring);
+  }
+  geometry.setIndex(indices);
+  geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
+  geometry.setAttribute('capOffset', new Float32BufferAttribute(offsets, 1));
   const endpoints = new InstancedInterleavedBuffer(positions, 6);
   geometry.setAttribute('segmentStart', new InterleavedBufferAttribute(endpoints, 3, 0));
   geometry.setAttribute('segmentEnd', new InterleavedBufferAttribute(endpoints, 3, 3));
@@ -22,35 +41,27 @@ export function extrusionMaterial(width: number) {
   return new ShaderMaterial({
     side: DoubleSide,
     uniforms: { radius: { value: width / 2 } },
-    // Each path is a single capsule lying flat on its sliced layer.
     vertexShader: `
       uniform float radius;
       attribute vec3 segmentStart;
       attribute vec3 segmentEnd;
       attribute vec3 segmentColor;
+      attribute float capOffset;
       varying vec3 pathColor;
-      varying vec2 pathPoint;
-      varying float end;
       void main() {
         vec2 delta = segmentEnd.xy - segmentStart.xy;
-        float distance = length(delta);
-        vec2 direction = delta / max(distance, 0.000001);
+        vec2 direction = delta / max(length(delta), 0.000001);
         vec2 perpendicular = vec2(-direction.y, direction.x);
-        float along = mix(-radius, distance + radius, position.x);
-        vec2 offset = along * direction + position.y * radius * perpendicular;
-        pathColor = segmentColor;
-        pathPoint = vec2(along / radius, position.y);
-        end = distance / radius;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(segmentStart + vec3(offset, 0.0), 1.0);
+        vec2 xy = mix(segmentStart.xy, segmentEnd.xy, position.x)
+          + radius * (capOffset * direction + position.y * perpendicular);
+        float z = mix(segmentEnd.z, segmentStart.z, position.z);
+        pathColor = segmentColor * mix(0.78, 1.0, position.z);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(xy, z, 1.0);
       }
     `,
     fragmentShader: `
       varying vec3 pathColor;
-      varying vec2 pathPoint;
-      varying float end;
       void main() {
-        float cap = max(max(-pathPoint.x, pathPoint.x - end), 0.0);
-        if (cap * cap + pathPoint.y * pathPoint.y > 1.0) discard;
         gl_FragColor = vec4(pathColor, 1.0);
         #include <colorspace_fragment>
       }

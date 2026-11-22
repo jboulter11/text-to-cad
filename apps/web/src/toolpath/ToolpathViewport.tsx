@@ -58,9 +58,16 @@ export function ToolpathViewport({ layers, bounds, colors, index, cumulative, co
     const rgb = new Float32Array(length / 2);
     const ends = [0];
     let cursor = 0;
+    const nextRise = layers.find(layer => layer.z > layers[0].z);
+    let thickness = nextRise ? nextRise.z - layers[0].z : lineWidth / 2;
+    let previousZ = 0;
     for (const { z, paths } of layers) {
+      const rise = z - previousZ;
+      // Jobs may restart Z for sequential objects or begin on an offset plane.
+      if (rise > 0 && rise <= lineWidth * 2) thickness = rise;
+      previousZ = z;
       for (let i = 0; i < paths.length; i += 5) {
-        positions.set([paths[i], paths[i + 1], z, paths[i + 2], paths[i + 3], z], cursor);
+        positions.set([paths[i], paths[i + 1], z, paths[i + 2], paths[i + 3], z - thickness], cursor);
         cursor += 6;
       }
       ends.push(cursor);
